@@ -23,7 +23,7 @@ uploads/
 logs/
 data/
 
-# 本地下载的模型/原生库与交付物：构建时由 scripts/download_*.sh 重新下载，不需要从上下文带入
+# 本地下载的模型/原生库与交付物：构建时由 xiaozhi.sh download 重新下载，不需要从上下文带入
 models/
 lib/
 delivery/

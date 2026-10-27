@@ -19,14 +19,9 @@ spring:
     hikari:
       pool-name: ServerHikariCP
 
-  # Flyway 数据库版本管理
-  flyway:
-    enabled: true
-    locations: classpath:db/migration
-    baseline-on-migrate: true
-    baseline-version: 0
-    encoding: UTF-8
-    validate-on-migrate: false
+  # 数据库结构与初始数据统一由仓库根目录的 db/init.sql 建立：
+  #   mysql -uroot -p < db/init.sql
+  # 应用不做任何迁移，结构变更直接改 db/init.sql 并同步实体。
 
   # JMX 配置
   jmx:
@@ -38,7 +33,7 @@ spring:
       add-mappings: true
 
   # 默认 dev（mvn spring-boot:run、java -jar、bin/*.sh、docker compose 都一样）；
-  # 走生产要显式指定：SPRING_PROFILES_ACTIVE=prod、--spring.profiles.active=prod 或 bin/all.sh start prod
+  # 走生产要显式指定：SPRING_PROFILES_ACTIVE=prod、--spring.profiles.active=prod 或 ./xiaozhi.sh start prod
   profiles:
     active: dev
 

@@ -25,14 +25,14 @@ sudo firewall-cmd --reload
 docker compose -f docker-compose-db.yml up -d
 ```
 
-已有 MySQL 8.0 就建库建号（**不用导入 SQL，Flyway 首次启动自动建表**）：
+已有 MySQL 8.0，执行仓库里的初始化脚本，一条命令建好账号、库、表与基础数据：
 
-```sql
-CREATE DATABASE xiaozhi CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'xiaozhi'@'localhost' IDENTIFIED BY '123456';
-GRANT ALL PRIVILEGES ON xiaozhi.* TO 'xiaozhi'@'localhost';
-FLUSH PRIVILEGES;
+```bash
+mysql -uroot -p < db/init.sql
 ```
+
+脚本内含完整表结构，应用启动时不会再建表；结构变更直接改这个文件。
+默认建的是 `xiaozhi` 库与 `xiaozhi / 123456` 账号，与 `application-dev.yml` 对齐。
 
 口令或地址不同时用环境变量覆盖：`SPRING_DATASOURCE_PASSWORD`、`SPRING_DATA_REDIS_HOST`。
 
@@ -42,9 +42,9 @@ FLUSH PRIVILEGES;
 git clone https://github.com/joey-zhou/xiaozhi-esp32-server-java
 cd xiaozhi-esp32-server-java
 
-./scripts/download_models.sh          # 全部
-./scripts/download_base.sh            # 只要基础依赖（VAD + 原生库），语音全用云端时够用
-./scripts/download_models.sh status   # 查看状态
+./xiaozhi.sh download                 # 全部
+./xiaozhi.sh download base            # 只要基础依赖（VAD + 原生库），语音全用云端时够用
+./xiaozhi.sh download status          # 查看状态
 ```
 
 ## 4. 启动
@@ -52,13 +52,14 @@ cd xiaozhi-esp32-server-java
 双进程：`xiaozhi-server`(8091) 管后台与 OTA，`xiaozhi-dialogue`(8092) 管设备对话。
 
 ```bash
-bin/all.sh start           # 自检 → 编译 → 启动，随后跟随日志（Ctrl+C 只退出跟随）
-bin/all.sh start prod      # 用生产配置
-bin/all.sh status / stop / restart / logs
+./xiaozhi.sh init          # 一次性：下载模型 → 自检 → 编译 → 启动，随后跟随日志（Ctrl+C 只退出跟随）
+./xiaozhi.sh start         # 模型已下好时：自检 → 编译 → 启动
+./xiaozhi.sh start prod    # 用生产配置
+./xiaozhi.sh stop / restart / status / logs
 ```
 
 启动前会自检 JDK 版本、模型与原生库、MySQL/Redis 连通性，缺什么直接给出补法，
-`SKIP_PREFLIGHT=1` 可跳过。也可单独管理：`bin/server.sh`、`bin/dialogue.sh`。
+`SKIP_PREFLIGHT=1` 可跳过。也可单独管理：`./xiaozhi.sh server`、`./xiaozhi.sh dialogue`。
 
 前端：`cd web && npm install && npm run build`，产物在 `web/dist`。
 
@@ -135,8 +136,8 @@ WantedBy=multi-user.target
 日常维护：
 
 ```bash
-bin/all.sh status
-git pull origin main && bin/all.sh restart
+./xiaozhi.sh status
+git pull origin main && ./xiaozhi.sh restart
 mysqldump -u root -p xiaozhi > backup.sql
 ```
 

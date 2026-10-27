@@ -12,17 +12,13 @@ spring:
   config:
     import: classpath:application-common.yml
 
-  # Flyway Migration 只在 server 执行，dialogue 不执行，避免多实例重复迁移
-  flyway:
-    enabled: false
-
   # 数据源配置（与 server 共享同一数据库）
   datasource:
     hikari:
       pool-name: DialogueHikariCP
 
   # 默认 dev（mvn spring-boot:run、java -jar、bin/*.sh、docker compose 都一样）；
-  # 走生产要显式指定：SPRING_PROFILES_ACTIVE=prod、--spring.profiles.active=prod 或 bin/all.sh start prod
+  # 走生产要显式指定：SPRING_PROFILES_ACTIVE=prod、--spring.profiles.active=prod 或 ./xiaozhi.sh start prod
   profiles:
     active: dev
 

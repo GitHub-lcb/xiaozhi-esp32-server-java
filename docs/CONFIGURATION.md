@@ -19,7 +19,7 @@
 **2. 语音识别**（可跳过）
 
 默认用本地 SenseVoice，零成本不联网，Docker 镜像已内置模型；源码部署要先跑
-`./scripts/download_stt.sh`。要用云端就在 配置管理 → 语音识别配置 里新增。
+`./xiaozhi.sh download stt`。要用云端就在 配置管理 → 语音识别配置 里新增。
 
 **3. 语音合成**（可跳过）
 
@@ -38,7 +38,7 @@
 
 | 启动方式 | 切到 prod |
 |---|---|
-| `bin/all.sh` / `bin\all.ps1` | `bin/all.sh start prod` |
+| `./xiaozhi.sh` / `bin\all.ps1` | `./xiaozhi.sh start prod` |
 | `java -jar` | `SPRING_PROFILES_ACTIVE=prod java -jar ...` |
 | `docker compose` | `.env` 里写 `SPRING_PROFILES_ACTIVE=prod` |
 
@@ -70,11 +70,13 @@ Redis 没开 requirepass 时 `_PASSWORD` 必须留空，空串会被当口令发
 
 ### 安全相关的默认值
 
-**都带着可用的默认值，不改也能跑，但对外部署前必须换掉。** 随机值用 `openssl rand -hex 16`。
+**不改也能跑，但对外部署前必须换掉。** 随机值用 `openssl rand -hex 16`。
+设备鉴权默认是关闭的：这项不设值就不校验 token，设备只要报一个 device-id 就能接入，
+所以对外提供服务时务必配上。
 
 | 变量 | 默认值 | 不改的后果 |
 |------|--------|-----------|
-| `XIAOZHI_DEVICE_AUTH_SECRET` | `xz-2026` | 任何人报一个 device-id 就能接进对话链路。server 与 dialogue 必须同值 |
+| `XIAOZHI_DEVICE_AUTH_SECRET` | 空（不鉴权） | 任何人报一个 device-id 就能接进对话链路。server 与 dialogue 必须同值 |
 | `JWT_SECRET_KEY` | 内置字符串 | 后台登录 token 可被伪造 |
 
 **存储与其它**
@@ -95,10 +97,10 @@ Redis 没开 requirepass 时 `_PASSWORD` 必须留空，空串会被当口令发
 Docker 镜像已内置全部本地模型与原生库。源码部署按需下载：
 
 ```bash
-./scripts/download_base.sh        # 原生库 + VAD 模型，必须
-./scripts/download_stt.sh         # 本地识别模型
-./scripts/download_tts.sh         # 本地合成模型
-./scripts/download_models.sh      # 以上全部
+./xiaozhi.sh download base        # 原生库 + VAD 模型，必须
+./xiaozhi.sh download stt         # 本地识别模型
+./xiaozhi.sh download tts         # 本地合成模型
+./xiaozhi.sh download             # 以上全部
 ```
 
 ## 端口

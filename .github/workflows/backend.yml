@@ -1,7 +1,7 @@
 name: backend
 
 # 后端门禁：编译 + 全量单测。测试基本是纯单测（仓库里没有 @SpringBootTest），
-# 唯一例外是迁移校验 FlywayMigrationGuardTest，要一个空 MySQL，所以挂了 MySQL service；
+# 唯一例外是初始化脚本校验 InitSqlGuardTest，要一个空 MySQL 真跑 db/init.sql，所以挂了 MySQL service；
 # Redis / Qdrant 不需要。
 on:
   push:
@@ -49,9 +49,9 @@ jobs:
           --health-timeout=5s
           --health-retries=30
     env:
-      XIAOZHI_MIGRATION_TEST_URL: jdbc:mysql://127.0.0.1:3306/xiaozhi_ci?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-      XIAOZHI_MIGRATION_TEST_USERNAME: xiaozhi
-      XIAOZHI_MIGRATION_TEST_PASSWORD: '123456'
+      XIAOZHI_INIT_SQL_TEST_URL: jdbc:mysql://127.0.0.1:3306/xiaozhi_ci?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      XIAOZHI_INIT_SQL_TEST_USERNAME: xiaozhi
+      XIAOZHI_INIT_SQL_TEST_PASSWORD: '123456'
     steps:
       - uses: actions/checkout@v4
 

@@ -3,7 +3,7 @@
 ## 部署
 
 **容器一直不 healthy**
-`docker compose logs <服务名>` 看日志。server 首次启动要跑完 Flyway 建表，到 healthy 可能要 1 分钟。
+`docker compose logs <服务名>` 看日志。server 首次启动要建表（已执行过 `db/init.sql` 时这步会跳过），到 healthy 可能要 1 分钟。
 
 **dialogue 迟迟不启动**
 它等 server 变 healthy 才起（建表由 server 负责），先排 server。
@@ -31,7 +31,7 @@ server 还没 healthy，`docker compose ps server`。
 或地址不是默认值——用 `SPRING_DATASOURCE_URL` / `SPRING_DATA_REDIS_HOST` 指过去。
 
 **启动报找不到原生库**
-`./scripts/download_base.sh`，然后确认 `lib/` 非空。Linux 下可能还要 `chmod -R 755 models lib`。
+`./xiaozhi.sh download base`，然后确认 `lib/` 非空。Linux 下可能还要 `chmod -R 755 models lib`。
 
 **构建失败**
 `mvn clean install`，确认网络可访问 Maven 中央仓库。

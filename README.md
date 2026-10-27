@@ -59,13 +59,13 @@ Xiaozhi ESP32 Server Java 是基于 [Xiaozhi ESP32](https://github.com/78/xiaozh
 - **RAG 知识库** — 多格式文档解析（PDF / Office / 图片），检索增强生成
 - **长期记忆与记忆图谱** — 记住用户偏好与关键信息，理解人物关系，跨会话记忆
 - **全链路监控** — Token / 时延 / 设备活跃度多维可视化，运维指标对接，设备接入一键自检
-- **一键部署** — bin 脚本 / Docker Compose，Flyway 自动建表，模型自动下载
+- **一键部署** — `xiaozhi.sh` 一个脚本 / Docker Compose，数据库一条 SQL 建好，模型自动下载
 
 ### 技术栈
 
 | 类别 | 技术选型 |
 |------|----------|
-| **后端** | Spring Boot、Spring MVC、MyBatis-Plus、Flyway、WebSocket |
+| **后端** | Spring Boot、Spring MVC、MyBatis-Plus、MySQL、WebSocket |
 | **前端** | Vue.js、Ant Design、响应式布局 |
 | **数据层** | MySQL 8.0、Redis 7、Qdrant（向量检索） |
 | **语音识别** | sherpa-onnx SenseVoice（本地）、Vosk（本地）、FunASR、阿里云、阿里云 NLS、腾讯云、讯飞、火山引擎 |
@@ -134,15 +134,14 @@ docker compose up -d
 git clone https://github.com/joey-zhou/xiaozhi-esp32-server-java
 cd xiaozhi-esp32-server-java
 docker compose -f docker-compose-db.yml up -d   # 起 MySQL + Redis，已有可跳过
-./scripts/download_models.sh                    # 下载模型和原生库，首次必须
-bin/all.sh start                                # 自检、编译并启动
+./xiaozhi.sh init                               # 下载模型和原生库、编译并启动，首次必须
 cd web && npm install && npm run dev            # 前端
 ```
 
-Windows 用 `bin\all.ps1 start`。详见 [CentOS 部署](./docs/CENTOS_DEVELOPMENT.md) / [Windows 部署](./docs/WINDOWS_DEVELOPMENT.md)。
+Windows 在 Git Bash 里跑同一条 `./xiaozhi.sh init`；也可用 PowerShell 版 `bin\all.ps1 start` 管理服务。详见 [CentOS 部署](./docs/CENTOS_DEVELOPMENT.md) / [Windows 部署](./docs/WINDOWS_DEVELOPMENT.md)。
 
-> `models/` 和 `lib/` 不在 Git 仓库中，首次部署需通过脚本下载。
-> 语音识别与合成全用第三方 API 的话，只跑 `./scripts/download_base.sh` 即可（仅 VAD 模型和原生库）。
+> `models/` 和 `lib/` 不在 Git 仓库中，首次部署需通过 `./xiaozhi.sh init` 下载。
+> 语音识别与合成全用第三方 API 的话，只跑 `./xiaozhi.sh download base` 即可（仅 VAD 模型和原生库）。
 
 ### 登录之后
 

@@ -1,6 +1,6 @@
 ﻿# =============================================================================
 # 公共函数库，被 server.ps1 / dialogue.ps1 / all.ps1 引用，不直接执行
-# Windows PowerShell 版本，与 _common.sh 功能对应
+# Windows PowerShell 版本，对应 xiaozhi.sh 的服务管理部分
 # =============================================================================
 
 $ErrorActionPreference = 'Stop'
@@ -91,16 +91,16 @@ function Invoke-Preflight {
     # 2) 原生库与 VAD 模型
     $libDir = Join-Path $RootDir 'lib'
     if (-not (Test-Path $libDir) -or -not (Get-ChildItem $libDir -ErrorAction SilentlyContinue)) {
-        Write-XzErr '缺少原生库目录 lib\，先在 Git Bash 里执行: ./scripts/download_base.sh'
+        Write-XzErr '缺少原生库目录 lib\，先在 Git Bash 里执行: ./xiaozhi.sh download base'
         $ok = $false
     }
     if (-not (Test-Path (Join-Path $RootDir 'models\silero_vad.onnx'))) {
-        Write-XzErr '缺少 VAD 模型 models\silero_vad.onnx，先在 Git Bash 里执行: ./scripts/download_base.sh'
+        Write-XzErr '缺少 VAD 模型 models\silero_vad.onnx，先在 Git Bash 里执行: ./xiaozhi.sh download base'
         $ok = $false
     }
     if (-not (Test-Path (Join-Path $RootDir 'models\sense-voice'))) {
         Write-XzWarn '未检测到本地语音识别模型 models\sense-voice'
-        Write-XzWarn '  用云端 STT 可以忽略；想用本地识别执行: ./scripts/download_stt.sh'
+        Write-XzWarn '  用云端 STT 可以忽略；想用本地识别执行: ./xiaozhi.sh download stt'
     }
 
     # 3) 中间件连通性

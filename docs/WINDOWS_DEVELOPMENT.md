@@ -24,22 +24,20 @@ docker compose -f docker-compose-db.yml up -d   # MySQL + Redis
 
 用了上面的 compose 就已经建好，可跳过。自己装的 MySQL 执行：
 
-```sql
-CREATE DATABASE xiaozhi CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'xiaozhi'@'localhost' IDENTIFIED BY '123456';
-GRANT ALL PRIVILEGES ON xiaozhi.* TO 'xiaozhi'@'localhost';
-FLUSH PRIVILEGES;
+```powershell
+mysql -uroot -p < db\init.sql    # 建账号 + 库 + 表 + 基础数据
 ```
 
-无需导入 SQL，Flyway 首次启动自动建表。口令不同时设 `$env:SPRING_DATASOURCE_PASSWORD`。
+脚本内含完整表结构，应用启动时不会再建表；结构变更直接改这个文件。口令不同时设 `$env:SPRING_DATASOURCE_PASSWORD`。
 
 ## 3. 模型与原生库
 
 下载脚本是 bash 写的，在 **Git Bash** 里执行：
 
 ```bash
-./scripts/download_models.sh          # 全部
-./scripts/download_base.sh            # 只要基础依赖（VAD + 原生库）
+./xiaozhi.sh download                 # 全部
+./xiaozhi.sh init                     # 下载 + 编译 + 启动，一条命令走完
+./xiaozhi.sh download base            # 只要基础依赖（VAD + 原生库）
 ```
 
 也可手动下载：[SenseVoice](https://github.com/k2-fsa/sherpa-onnx/releases/tag/asr-models) 的
@@ -57,7 +55,7 @@ bin\all.ps1 status / stop / restart
 启动前会自检 JDK 版本、模型与原生库、MySQL/Redis 连通性，`$env:SKIP_PREFLIGHT = '1'` 可跳过。
 提示脚本被禁止执行时：`Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass`。
 
-Git Bash 里也可以用 `bin/all.sh start`。前端：`cd web && npm install && npm run dev`。
+Git Bash 里也可以用 `./xiaozhi.sh start`。前端：`cd web && npm install && npm run dev`。
 
 ## 5. 访问
 

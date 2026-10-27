@@ -10,7 +10,7 @@ curl -O https://raw.githubusercontent.com/joey-zhou/xiaozhi-esp32-server-java/ma
 docker compose up -d
 ```
 
-起 5 个容器：MySQL、Redis、server、dialogue、web。表由 Flyway 自动建，不用导入 SQL。
+起 5 个容器：MySQL、Redis、server、dialogue、web。库、表与基础数据由 `db/init.sql` 随 MySQL 容器首次启动一次性建好，不用手动导入。
 
 成功的标志是所有容器都 healthy（首次约 1～2 分钟）：
 
@@ -112,7 +112,7 @@ docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
 ```
 
 首次构建要编译全部 Java 模块并下载约 1.5GB 模型，**耗时 20～40 分钟**。
-国内网络可以在 `.env` 里配 `BUILD_PROXY`，或先用 `./scripts/download_models.sh` 把模型下好
+国内网络可以在 `.env` 里配 `BUILD_PROXY`，或先用 `./xiaozhi.sh download` 把模型下好
 （构建会自动跳过已存在的文件）。
 
 镜像内容：server 与 dialogue 含本地模型 + 原生库（体积几个 GB），web 是前端产物 + nginx。
@@ -131,7 +131,7 @@ docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
 
 ```bash
 docker compose -f docker-compose-db.yml up -d
-bin/all.sh start
+./xiaozhi.sh start
 ```
 
 这套 compose 把 MySQL 映射在 **3306**（不是 13306），与 `application-dev.yml` 的默认值对齐。
