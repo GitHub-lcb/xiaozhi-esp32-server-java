@@ -29,7 +29,9 @@ permissions:
 
 jobs:
   build:
-    if: github.repository == 'joey-zhou/xiaozhi-esp32-server-java'
+    # 只在有推送权限的本仓库构建。fork 后要自己发镜像的，把这里换成你的仓库全名
+    # （即 <owner>/<repo>），否则本 job 会被跳过、什么都不会产出。
+    if: github.repository == 'GitHub-lcb/xiaozhi-esp32-server-java'
     runs-on: ubuntu-latest
     timeout-minutes: 180
     strategy:
