@@ -38,7 +38,7 @@ config WEBSOCKET_URL
 # 1.6.2以后固件
 
 找到`OTA_URL`的`default`的内容，把`https://api.tenclass.net/xiaozhi/ota/`
-   改成你自己的地址，例如，我的接口地址是`http://192.168.5.165:8091/api/device/ota/`，就把内容改成这个。
+   改成你自己的地址，例如，我的接口地址是`http://192.168.5.165:8091/api/device/ota`，就把内容改成这个。
 
 修改前：
 ```
@@ -58,7 +58,13 @@ config OTA_VERSION_URL
         The application will access this URL to check for updates.
 ```
 
-注意：你的地址是`http://`开头，不是`https://`开头，一定不要写错了。
+注意两点：
+
+1. **地址末尾不要带斜杠**。Spring Boot 3 默认关闭了尾斜杠匹配，写成 `.../api/device/ota/`
+   会直接 404。设备随后会用这个地址再 POST 一次 `.../activate`，所以这里多一个斜杠等于激活流程整个断掉。
+2. 地址的协议跟服务端一致：直连 IP 部署用 `http://`；配了 `xiaozhi.server.domain`
+   （如 `ai.lichenbo.cn`）时服务端下发的是 `https://`，设备侧也要写 `https://`，
+   且设备要能校验到该域名的证书链。
 
 
 3. 设置编译参数
