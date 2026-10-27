@@ -42,6 +42,17 @@ public class OpenAiModelProvider implements ChatModelProvider {
 
     private static final ExecutorService HTTP_EXECUTOR = AppVirtualThreads.newPerTaskExecutor("openai-http-");
 
+    /**
+     * 非思考模式的输出上限。语音回复本就短，2000 给不规整输出留了余量。
+     */
+    private static final int DEFAULT_MAX_COMPLETION_TOKENS = 2000;
+
+    /**
+     * 思考模式的输出上限。reasoning token 同样计入 max_tokens，沿用 2000 时
+     * 很容易被思考吃光：正文为空不会报错，只表现为设备静默或播兜底话术。
+     */
+    private static final int THINKING_MAX_COMPLETION_TOKENS = 8000;
+
     @Lazy
     @Autowired
     private ToolCallingManager toolCallingManager;
@@ -79,7 +90,9 @@ public class OpenAiModelProvider implements ChatModelProvider {
                 .model(model)
                 .temperature(temperature)
                 .topP(topP)
-                .maxCompletionTokens(2000)
+                .maxCompletionTokens(enableThinking
+                        ? THINKING_MAX_COMPLETION_TOKENS
+                        : DEFAULT_MAX_COMPLETION_TOKENS)
                 .streamUsage(true);
 
         applyThinkingOptions(chatOptionsBuilder, enableThinking, model);
