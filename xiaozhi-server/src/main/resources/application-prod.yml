@@ -3,18 +3,20 @@
 # ============================================================
 
 spring:
-  # 数据源配置
+  # 数据源配置。
+  # 容器部署时由 SPRING_DATASOURCE_* 环境变量覆盖（环境变量优先级本来就高于本文件），
+  # 写成占位符只是把"该改哪里"明确下来，避免有人直接改这份文件、容器里却不生效。
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/xiaozhi?useUnicode=true&characterEncoding=utf8&serverTimezone=GMT%2B8&useSSL=false&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true
-    username: xiaozhi
-    password: 123456
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/xiaozhi?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true}
+    username: ${SPRING_DATASOURCE_USERNAME:xiaozhi}
+    password: ${SPRING_DATASOURCE_PASSWORD:123456}
 
 # 生产环境邮箱配置
 email:
   smtp:
-    username: xxxx
-    password: xxxx
+    username: ${EMAIL_SMTP_USERNAME:}
+    password: ${EMAIL_SMTP_PASSWORD:}
 
 # 阿里云短信配置
 sms:
@@ -26,4 +28,8 @@ sms:
 
 xiaozhi:
   server:
-    domain: connectai.chat
+    # 对外域名。配了就走 HTTPS/WSS：OTA 下发 https://<domain>/api/device/ota，
+    # 设备连 wss://ws.<domain>/ws/xiaozhi/v1/。留空则按探测到的 IP 走 http/ws。
+    # 前提：<domain> 与 ws.<domain> 都要解析到本机，且证书覆盖这两个名字。
+    # 换域名用环境变量 XIAOZHI_SERVER_DOMAIN 覆盖，不必改代码。
+    domain: ${XIAOZHI_SERVER_DOMAIN:ai.lichenbo.cn}
