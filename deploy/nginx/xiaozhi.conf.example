@@ -1,0 +1,115 @@
+# xiaozhi 反向代理示例
+# 把 <domain> 换成你的域名，证书路径换成你的实际路径后放到 /etc/nginx/sites-available/ 并软链到 sites-enabled/。
+#
+# 为什么需要它：云服务器的安全组通常只放行 80/443，而 compose 里 web 监听 8084、
+# server 8091、dialogue 8092 都不对外开放。用 nginx 把入口收敛到 443，
+# 顺带解决 HTTPS 与 WebSocket 升级。
+#
+# web 容器内部已经按路径分发：/ → 静态页面、/api 与 /audio /uploads → server:8091、
+# /ws → dialogue:8092，所以这里只需要整体转发到 8084 一个上游。
+
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
+# HTTP：域名跳 HTTPS，其余（IP 直连）保留明文，方便没有域名时调试
+server {
+    listen 80;
+    server_name <domain> ws.<domain> mcp.<domain>;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 80 default_server;
+    server_name _;
+    client_max_body_size 100M;
+    location / {
+        proxy_pass http://127.0.0.1:8084;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+    }
+}
+
+# 管理界面 + API + OTA
+server {
+    listen 443 ssl http2;
+    server_name <domain>;
+
+    ssl_certificate     /etc/nginx/ssl/<domain>.pem;
+    ssl_certificate_key /etc/nginx/ssl/<domain>.key;
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    client_max_body_size 100M;
+    location / {
+        proxy_pass http://127.0.0.1:8084;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+    }
+}
+
+# 设备 WebSocket（wss://ws.<domain>/ws/xiaozhi/v1/）
+# 证书必须覆盖 ws.<domain> 本身：通配符 *.example.com 不覆盖 example.com 裸域，
+# 反过来 *.ai.example.com 也不覆盖 ai.example.com，申请证书时注意 SAN。
+server {
+    listen 443 ssl http2;
+    server_name ws.<domain>;
+
+    ssl_certificate     /etc/nginx/ssl/ws.<domain>.pem;
+    ssl_certificate_key /etc/nginx/ssl/ws.<domain>.key;
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    client_max_body_size 100M;
+    location / {
+        proxy_pass http://127.0.0.1:8084;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+    }
+}
+
+# MCP 通道（wss://mcp.<domain>/ws/mcp/）
+# 注意：当前代码只注册了 /ws/xiaozhi/v1/ 一个 WebSocket handler，
+# 这个域名和证书可以先备好，端点要等 MCP 服务端实现后才有意义。
+server {
+    listen 443 ssl http2;
+    server_name mcp.<domain>;
+
+    ssl_certificate     /etc/nginx/ssl/mcp.<domain>.pem;
+    ssl_certificate_key /etc/nginx/ssl/mcp.<domain>.key;
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    client_max_body_size 100M;
+    location / {
+        proxy_pass http://127.0.0.1:8084;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+    }
+}

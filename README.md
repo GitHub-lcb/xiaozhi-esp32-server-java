@@ -162,6 +162,7 @@ Windows 在 Git Bash 里跑同一条 `./xiaozhi.sh init`；也可用 PowerShell 
 | 文档 | 内容 |
 |------|------|
 | [Docker 部署](./docs/DOCKER.md) | 一键启动、升级、源码构建 |
+| [云服务器部署](./docs/DOCKER_DEPLOY.md) | 国内网络、只有 80/443、小内存机器的实机部署记录 |
 | [配置说明](./docs/CONFIGURATION.md) | 首次配置、环境变量、安全默认值 |
 | [常见问题](./docs/FAQ.md) | 部署与使用中的高频问题 |
 | [CentOS 部署](./docs/CENTOS_DEVELOPMENT.md) | Linux 源码部署，推荐生产环境 |
