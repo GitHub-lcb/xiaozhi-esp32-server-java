@@ -36,6 +36,8 @@ public class RedisBroadcast {
     public static final String CHANNEL_CLOSE_SESSION = "xiaozhi:close-session";
     public static final String CHANNEL_ROLE_UPDATED = "xiaozhi:role-updated";
     public static final String CHANNEL_DEVICE_UPDATED = "xiaozhi:device-updated";
+    public static final String CHANNEL_DEVICE_PUSH = "xiaozhi:device-push";
+    public static final String CHANNEL_DEVICE_COMMAND = "xiaozhi:device-command";
 
     @Resource
     private StringRedisTemplate stringRedisTemplate;
@@ -105,6 +107,30 @@ public class RedisBroadcast {
 
     public void deviceUpdated(String deviceId) {
         publish(CHANNEL_DEVICE_UPDATED, deviceId);
+    }
+
+    /**
+     * 主动推送：让持有该设备会话的实例播报一段文本。
+     * 目标设备不在任何实例上时这条广播没人处理，属于正常情况（发送方已按通道在线状态筛过）。
+     */
+    public void pushDevice(String deviceId, String text, Long pushId) {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("deviceId", deviceId);
+        payload.put("text", text);
+        payload.put("pushId", pushId);
+        publish(CHANNEL_DEVICE_PUSH, JsonUtil.toJson(payload));
+    }
+
+    /**
+     * 远程控制：让持有该设备会话的实例去调用设备 MCP 工具，结果由实例回填到指令记录。
+     */
+    public void sendDeviceCommand(String deviceId, Long commandId, String toolName, String arguments) {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("deviceId", deviceId);
+        payload.put("commandId", commandId);
+        payload.put("toolName", toolName);
+        payload.put("arguments", arguments);
+        publish(CHANNEL_DEVICE_COMMAND, JsonUtil.toJson(payload));
     }
 
     public void configChanged(String configType, Integer configId) {

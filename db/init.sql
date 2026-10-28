@@ -71,7 +71,7 @@ CREATE TABLE `sys_auth_role_permission` (
   `createTime` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_auth_role_permission` (`authRoleId`,`permissionId`)
-) ENGINE=InnoDB AUTO_INCREMENT=93 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='角色-权限关联表';
+) ENGINE=InnoDB AUTO_INCREMENT=147 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='角色-权限关联表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `sys_code`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -159,6 +159,341 @@ CREATE TABLE `sys_device` (
   KEY `userId` (`userId`),
   KEY `roleId` (`roleId`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='设备信息表';
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `sys_device_group_member`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `sys_device_group_member` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `groupId` bigint unsigned NOT NULL COMMENT '分组ID',
+  `deviceId` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '设备ID',
+  `createTime` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updateTime` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_group_device` (`groupId`,`deviceId`),
+  KEY `idx_member_device` (`deviceId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='设备分组关系表';
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `sys_device_group`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `sys_device_group` (
+  `groupId` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '分组ID',
+  `userId` int unsigned NOT NULL COMMENT '所属用户',
+  `groupName` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '分组名，如 客厅',
+  `createTime` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updateTime` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`groupId`),
+  KEY `idx_group_user` (`userId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='设备分组表';
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `sys_dialogue_metric`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `sys_dialogue_metric` (
+  `metricId` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '指标ID',
+  `deviceId` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '设备ID',
+  `roleId` int unsigned DEFAULT NULL COMMENT '角色ID',
+  `sessionId` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '会话ID',
+  `promptTokens` int unsigned DEFAULT '0' COMMENT '提示词 token',
+  `completionTokens` int unsigned DEFAULT '0' COMMENT '回复 token',
+  `totalTokens` int unsigned DEFAULT '0' COMMENT '合计 token',
+  `latencyMs` bigint unsigned DEFAULT '0' COMMENT '本轮从收句到首句可播的耗时(毫秒)',
+  `createTime` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updateTime` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`metricId`),
+  KEY `idx_metric_time` (`createTime`),
+  KEY `idx_metric_device` (`deviceId`,`createTime`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='对话轮次指标表';
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `sys_voice_clone`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `sys_voice_clone` (
+  `cloneId` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '克隆ID',
+  `userId` int unsigned NOT NULL COMMENT '所属用户',
+  `voiceName` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '音色名称',
+  `provider` varchar(30) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '服务商：aliyun/volcengine',
+  `voiceId` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '服务商返回的音色ID',
+  `samplePath` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '样本音频存储路径',
+  `state` enum('0','1','2') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '0' COMMENT '0处理中 1就绪 2失败',
+  `errorMsg` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '失败原因',
+  `createTime` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updateTime` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`cloneId`),
+  KEY `idx_clone_user` (`userId`,`state`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='音色克隆表';
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `sys_memory_relation`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `sys_memory_relation` (
+  `relationId` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '关系ID',
+  `userId` int unsigned NOT NULL COMMENT '所属用户',
+  `fromEntityId` bigint unsigned NOT NULL COMMENT '起点实体',
+  `toEntityId` bigint unsigned NOT NULL COMMENT '终点实体',
+  `relation` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '关系名，如 喜欢/住在/女儿',
+  `createTime` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updateTime` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`relationId`),
+  KEY `idx_relation_user` (`userId`),
+  KEY `idx_relation_from` (`fromEntityId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='记忆图谱关系表';
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `sys_memory_entity`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `sys_memory_entity` (
+  `entityId` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '实体ID',
+  `userId` int unsigned NOT NULL COMMENT '所属用户',
+  `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '实体名，如 妈妈/乌龙茶',
+  `type` varchar(30) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '类型：person/thing/place/other',
+  `createTime` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updateTime` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`entityId`),
+  UNIQUE KEY `uk_entity_user_name` (`userId`,`name`),
+  KEY `idx_entity_user` (`userId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='记忆图谱实体表';
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `sys_memory_fact`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `sys_memory_fact` (
+  `factId` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '事实ID',
+  `userId` int unsigned NOT NULL COMMENT '所属用户',
+  `memberName` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '说话人/成员，空表示对全家人有效',
+  `content` varchar(500) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '事实内容',
+  `category` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '分类：偏好/日程/关系/其它',
+  `source` enum('manual','auto') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'manual' COMMENT '来源：manual-人工录入 auto-自动抽取',
+  `state` enum('0','1') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '1' COMMENT '1启用 0停用',
+  `createTime` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updateTime` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`factId`),
+  KEY `idx_fact_user` (`userId`,`state`),
+  KEY `idx_fact_member` (`userId`,`memberName`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='长期记忆事实表';
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `sys_voiceprint`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `sys_voiceprint` (
+  `voiceprintId` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '声纹ID',
+  `userId` int unsigned NOT NULL COMMENT '所属用户',
+  `memberName` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '成员称呼，如 爸爸/妈妈',
+  `embedding` longtext COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '声纹向量 JSON',
+  `sampleSeconds` decimal(6,2) DEFAULT '0.00' COMMENT '注册样本时长(秒)',
+  `state` enum('0','1') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '1' COMMENT '1启用 0停用',
+  `createTime` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updateTime` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`voiceprintId`),
+  KEY `idx_voiceprint_user` (`userId`,`state`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='声纹注册表';
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `sys_knowledge_chunk`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `sys_knowledge_chunk` (
+  `chunkId` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '分片ID',
+  `docId` bigint unsigned NOT NULL COMMENT '文档ID',
+  `knowledgeId` int unsigned NOT NULL COMMENT '知识库ID',
+  `chunkIndex` int unsigned NOT NULL DEFAULT '0' COMMENT '分片序号',
+  `content` text COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '分片正文',
+  `embedding` longtext COLLATE utf8mb4_unicode_ci COMMENT '向量，JSON 数组；为空表示未向量化',
+  `createTime` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updateTime` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`chunkId`),
+  KEY `idx_chunk_doc` (`docId`),
+  KEY `idx_chunk_knowledge` (`knowledgeId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='知识库文档分片表';
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `sys_knowledge_doc`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `sys_knowledge_doc` (
+  `docId` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '文档ID',
+  `knowledgeId` int unsigned NOT NULL COMMENT '知识库ID',
+  `fileName` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '原始文件名',
+  `storedPath` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '文件存储路径',
+  `fileType` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '文件类型',
+  `fileSize` bigint unsigned DEFAULT '0' COMMENT '文件大小',
+  `chunkCount` int unsigned DEFAULT '0' COMMENT '分片数',
+  `state` enum('0','1','2') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '0' COMMENT '0处理中 1就绪 2失败',
+  `errorMsg` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '失败原因',
+  `createUserId` int unsigned DEFAULT NULL COMMENT '上传人',
+  `createTime` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updateTime` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`docId`),
+  KEY `idx_doc_knowledge` (`knowledgeId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='知识库文档表';
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `sys_knowledge_base`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `sys_knowledge_base` (
+  `knowledgeId` int unsigned NOT NULL AUTO_INCREMENT COMMENT '知识库ID',
+  `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '知识库名称',
+  `description` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '说明',
+  `roleId` int unsigned DEFAULT NULL COMMENT '绑定角色，空表示不自动挂载',
+  `embeddingConfigId` int unsigned DEFAULT NULL COMMENT '向量模型配置ID，空表示用全局默认',
+  `state` enum('0','1') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '1' COMMENT '1启用 0停用',
+  `createUserId` int unsigned DEFAULT NULL COMMENT '创建人',
+  `createTime` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updateTime` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`knowledgeId`),
+  KEY `idx_kb_role` (`roleId`),
+  KEY `idx_kb_state` (`state`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='知识库表';
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `sys_device_screenshot`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `sys_device_screenshot` (
+  `shotId` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '截图ID',
+  `deviceId` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '设备ID',
+  `commandId` bigint unsigned DEFAULT NULL COMMENT '关联的指令ID',
+  `imageUrl` varchar(1000) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '回传图片地址',
+  `state` enum('0','1','2') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '0' COMMENT '0待回传 1成功 2失败',
+  `message` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '失败原因或设备返回摘要',
+  `createUserId` int unsigned DEFAULT NULL COMMENT '操作人',
+  `createTime` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updateTime` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`shotId`),
+  KEY `idx_shot_device` (`deviceId`,`createTime`),
+  KEY `idx_shot_command` (`commandId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='设备截图记录表';
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `sys_device_command`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `sys_device_command` (
+  `commandId` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '指令ID',
+  `deviceId` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '设备ID',
+  `action` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '动作：reboot/volume/custom',
+  `toolName` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '实际调用的设备 MCP 工具名',
+  `arguments` varchar(1000) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '工具入参 JSON',
+  `state` enum('0','1','2') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '0' COMMENT '0已下发 1成功 2失败',
+  `result` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '执行结果或失败原因',
+  `createUserId` int unsigned DEFAULT NULL COMMENT '操作人',
+  `createTime` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updateTime` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`commandId`),
+  KEY `idx_command_device` (`deviceId`,`createTime`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='设备远程控制指令记录表';
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `sys_reminder`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `sys_reminder` (
+  `reminderId` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '提醒ID',
+  `deviceId` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '目标设备ID',
+  `title` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '提醒标题',
+  `content` varchar(500) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '播报内容',
+  `remindTime` datetime NOT NULL COMMENT '下次播报时间',
+  `repeatType` enum('once','daily','weekday') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'once' COMMENT '重复方式：once-一次性 daily-每天 weekday-工作日',
+  `state` enum('0','1','2','3') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '0' COMMENT '0待播报 1已播报 2已取消 3已错过',
+  `lastFireTime` datetime DEFAULT NULL COMMENT '最后一次播报时间',
+  `createUserId` int unsigned DEFAULT NULL COMMENT '创建人',
+  `createTime` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updateTime` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`reminderId`),
+  KEY `idx_reminder_due` (`state`,`remindTime`),
+  KEY `idx_reminder_device` (`deviceId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='语音提醒与闹钟表';
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `sys_push_message`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `sys_push_message` (
+  `pushId` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '推送ID',
+  `title` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '推送标题',
+  `content` varchar(1000) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '播报内容',
+  `targetType` enum('device','user') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'device' COMMENT '目标类型：device-按设备 user-按用户',
+  `targetValue` varchar(2000) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '目标值，逗号分隔的设备ID或用户ID',
+  `state` enum('0','1','2') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '0' COMMENT '0待发送 1已发送 2已取消',
+  `totalCount` int unsigned DEFAULT '0' COMMENT '目标设备数',
+  `sentCount` int unsigned DEFAULT '0' COMMENT '已下发数',
+  `offlineCount` int unsigned DEFAULT '0' COMMENT '离线跳过数',
+  `sentTime` datetime DEFAULT NULL COMMENT '发送时间',
+  `createUserId` int unsigned DEFAULT NULL COMMENT '创建人',
+  `createTime` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updateTime` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`pushId`),
+  KEY `idx_push_state` (`state`,`sentTime`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='主动推送消息表';
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `sys_device_channel`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `sys_device_channel` (
+  `deviceId` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '设备ID',
+  `channel` enum('websocket','mqtt') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'websocket' COMMENT '最近一次使用的接入通道',
+  `clientId` varchar(128) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'MQTT 客户端ID',
+  `onlineState` enum('0','1') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '0' COMMENT '通道是否在线：1在线 0离线',
+  `lastSeenTime` datetime DEFAULT NULL COMMENT '最后一次心跳或上行消息时间',
+  `createTime` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updateTime` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`deviceId`),
+  KEY `idx_channel_online` (`onlineState`,`lastSeenTime`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='设备接入通道与在线状态表';
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `sys_firmware`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `sys_firmware` (
+  `firmwareId` int unsigned NOT NULL AUTO_INCREMENT COMMENT '固件ID',
+  `version` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '固件版本号，如 1.2.3',
+  `chipModel` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '适用芯片型号，空表示不限',
+  `fileUrl` varchar(500) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '固件文件地址',
+  `fileSize` bigint unsigned DEFAULT '0' COMMENT '文件大小(字节)',
+  `md5` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '文件MD5，供设备校验',
+  `releaseNotes` text COLLATE utf8mb4_unicode_ci COMMENT '发布说明',
+  `state` enum('0','1') COLLATE utf8mb4_unicode_ci DEFAULT '1' COMMENT '状态(1启用 0停用)',
+  `createTime` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updateTime` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`firmwareId`),
+  UNIQUE KEY `uk_firmware_version` (`version`,`chipModel`),
+  KEY `idx_firmware_state` (`state`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='设备固件版本表';
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `sys_firmware_release`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `sys_firmware_release` (
+  `releaseId` int unsigned NOT NULL AUTO_INCREMENT COMMENT '升级任务ID',
+  `firmwareId` int unsigned NOT NULL COMMENT '目标固件ID',
+  `releaseName` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '任务名称',
+  `strategy` enum('all','percent','whitelist') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'all' COMMENT '投放策略：all-全量, percent-按比例, whitelist-白名单',
+  `percent` tinyint unsigned DEFAULT '0' COMMENT '灰度百分比(1-100)，strategy=percent 时有效',
+  `whitelist` text COLLATE utf8mb4_unicode_ci COMMENT '白名单设备ID，逗号分隔，strategy=whitelist 时有效',
+  `startTime` datetime DEFAULT NULL COMMENT '时间窗开始，空表示立即生效',
+  `endTime` datetime DEFAULT NULL COMMENT '时间窗结束，空表示不设结束',
+  `state` enum('0','1','2','3') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '0' COMMENT '0待开始 1进行中 2已暂停 3已结束',
+  `createTime` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updateTime` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`releaseId`),
+  KEY `idx_release_firmware` (`firmwareId`),
+  KEY `idx_release_state` (`state`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='固件升级任务表';
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `sys_firmware_upgrade_log`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `sys_firmware_upgrade_log` (
+  `logId` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '记录ID',
+  `releaseId` int unsigned DEFAULT NULL COMMENT '升级任务ID',
+  `firmwareId` int unsigned DEFAULT NULL COMMENT '固件ID',
+  `deviceId` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '设备ID',
+  `chipModel` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '芯片型号',
+  `fromVersion` varchar(32) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '升级前版本',
+  `toVersion` varchar(32) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '升级目标版本',
+  `ip` varchar(45) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '设备IP',
+  `status` enum('0','1','2') COLLATE utf8mb4_unicode_ci DEFAULT '0' COMMENT '0已下发 1成功 2失败',
+  `createTime` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updateTime` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`logId`),
+  KEY `idx_upgrade_device` (`deviceId`,`createTime`),
+  KEY `idx_upgrade_release` (`releaseId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='固件升级记录表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `sys_mcp_tool_exclude`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -449,6 +784,60 @@ INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `cre
 INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (90,2,61,'2026-10-28 00:37:45');
 INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (91,2,63,'2026-10-28 00:37:45');
 INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (92,2,62,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (93,1,65,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (94,1,66,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (95,1,67,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (96,1,68,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (97,1,69,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (98,1,70,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (99,1,71,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (100,1,72,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (101,1,73,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (102,1,74,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (103,1,75,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (104,1,76,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (105,1,77,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (106,1,78,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (107,1,79,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (108,1,80,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (109,1,81,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (110,1,82,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (111,1,83,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (112,1,84,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (113,1,85,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (114,1,86,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (115,1,87,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (116,1,88,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (117,1,89,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (118,1,90,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (119,1,91,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (120,1,92,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (121,1,93,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (122,1,94,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (123,1,95,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (124,1,96,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (125,1,97,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (126,1,98,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (127,1,99,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (128,1,100,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (129,1,101,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (130,1,102,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (131,1,103,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (132,1,104,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (133,1,105,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (134,1,106,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (135,1,107,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (136,1,108,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (137,1,109,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (138,1,110,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (139,1,111,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (140,1,112,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (141,1,113,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (142,1,114,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (143,1,115,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (144,1,116,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (145,1,117,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (146,1,118,'2026-10-28 00:37:45');
 /*!40000 ALTER TABLE `sys_auth_role_permission` ENABLE KEYS */;
 
 /*!40000 ALTER TABLE `sys_permission` DISABLE KEYS */;
@@ -505,6 +894,60 @@ INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey
 INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (62,5,'角色MCP工具更新接口','system:role:mcp-tools:api:update','api',NULL,NULL,NULL,16,'0','1','2026-10-28 00:37:45','2026-10-28 00:37:45');
 INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (63,5,'系统MCP工具列表接口','system:role:mcp-tools:api:system-global','api',NULL,NULL,NULL,17,'0','1','2026-10-28 00:37:45','2026-10-28 00:37:45');
 INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (64,7,'MCP工具全局开关接口','system:config:mcpServer:api:update','api',NULL,NULL,NULL,10,'0','1','2026-10-28 00:37:45','2026-10-28 00:37:45');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (65,NULL,'固件升级','system:firmware','menu','/firmware','page/Firmware','cloud-upload',4,'1','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (66,65,'固件列表接口','system:firmware:api:list','api',NULL,NULL,NULL,1,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (67,65,'固件创建接口','system:firmware:api:create','api',NULL,NULL,NULL,2,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (68,65,'固件更新接口','system:firmware:api:update','api',NULL,NULL,NULL,3,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (69,65,'固件删除接口','system:firmware:api:delete','api',NULL,NULL,NULL,4,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (70,65,'升级任务列表接口','system:firmware:release:api:list','api',NULL,NULL,NULL,5,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (71,65,'升级任务创建接口','system:firmware:release:api:create','api',NULL,NULL,NULL,6,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (72,65,'升级任务更新接口','system:firmware:release:api:update','api',NULL,NULL,NULL,7,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (73,65,'升级任务删除接口','system:firmware:release:api:delete','api',NULL,NULL,NULL,8,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (74,65,'升级任务状态接口','system:firmware:release:api:state','api',NULL,NULL,NULL,9,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (75,65,'升级记录列表接口','system:firmware:upgrade-log:api:list','api',NULL,NULL,NULL,10,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (76,3,'设备自检接口','system:device:api:self-check','api',NULL,NULL,NULL,7,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (77,NULL,'主动推送','system:push','menu','/push','page/Push','notification',5,'1','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (78,77,'推送列表接口','system:push:api:list','api',NULL,NULL,NULL,1,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (79,77,'推送创建接口','system:push:api:create','api',NULL,NULL,NULL,2,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (80,77,'推送发送接口','system:push:api:send','api',NULL,NULL,NULL,3,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (81,77,'推送删除接口','system:push:api:delete','api',NULL,NULL,NULL,4,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (82,NULL,'语音提醒','system:reminder','menu','/reminder','page/Reminder','clock',6,'1','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (83,82,'提醒列表接口','system:reminder:api:list','api',NULL,NULL,NULL,1,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (84,82,'提醒创建接口','system:reminder:api:create','api',NULL,NULL,NULL,2,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (85,82,'提醒更新接口','system:reminder:api:update','api',NULL,NULL,NULL,3,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (86,82,'提醒取消接口','system:reminder:api:cancel','api',NULL,NULL,NULL,4,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (87,82,'提醒删除接口','system:reminder:api:delete','api',NULL,NULL,NULL,5,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (88,3,'设备远程控制接口','system:device:api:command','api',NULL,NULL,NULL,8,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (89,3,'设备指令记录接口','system:device:command:api:list','api',NULL,NULL,NULL,9,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (90,3,'设备截图接口','system:device:api:screenshot','api',NULL,NULL,NULL,10,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (91,3,'设备截图记录接口','system:device:screenshot:api:list','api',NULL,NULL,NULL,11,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (92,NULL,'知识库','system:knowledge','menu','/knowledge','page/Knowledge','book',7,'1','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (93,92,'知识库列表接口','system:knowledge:api:list','api',NULL,NULL,NULL,1,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (94,92,'知识库创建接口','system:knowledge:api:create','api',NULL,NULL,NULL,2,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (95,92,'知识库更新接口','system:knowledge:api:update','api',NULL,NULL,NULL,3,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (96,92,'知识库删除接口','system:knowledge:api:delete','api',NULL,NULL,NULL,4,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (97,92,'文档上传接口','system:knowledge:doc:api:upload','api',NULL,NULL,NULL,5,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (98,92,'文档删除接口','system:knowledge:doc:api:delete','api',NULL,NULL,NULL,6,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (99,92,'检索测试接口','system:knowledge:api:search','api',NULL,NULL,NULL,7,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (100,NULL,'声纹识别','system:voiceprint','menu','/voiceprint','page/Voiceprint','sound',8,'1','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (101,100,'声纹列表接口','system:voiceprint:api:list','api',NULL,NULL,NULL,1,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (102,100,'声纹注册接口','system:voiceprint:api:create','api',NULL,NULL,NULL,2,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (103,100,'声纹删除接口','system:voiceprint:api:delete','api',NULL,NULL,NULL,3,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (104,100,'声纹识别测试接口','system:voiceprint:api:match','api',NULL,NULL,NULL,4,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (105,1,'监控概览接口','system:stats:api:overview','api',NULL,NULL,NULL,1,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (106,1,'消息趋势接口','system:stats:api:messages','api',NULL,NULL,NULL,2,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (107,1,'Top设备接口','system:stats:api:devices','api',NULL,NULL,NULL,3,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (108,NULL,'长期记忆','system:memory-fact','menu','/memory-fact','page/MemoryFact','database',9,'1','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (109,108,'记忆列表接口','system:memory-fact:api:list','api',NULL,NULL,NULL,1,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (110,108,'记忆创建接口','system:memory-fact:api:create','api',NULL,NULL,NULL,2,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (111,108,'记忆删除接口','system:memory-fact:api:delete','api',NULL,NULL,NULL,3,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (112,NULL,'记忆图谱','system:memory-graph','menu','/memory-graph','page/MemoryGraph','share-alt',10,'1','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (113,112,'图谱查询接口','system:memory-graph:api:list','api',NULL,NULL,NULL,1,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (114,112,'关系创建接口','system:memory-graph:api:create','api',NULL,NULL,NULL,2,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (115,NULL,'音色克隆','system:voice-clone','menu','/voice-clone','page/VoiceClone','audio',11,'1','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (116,115,'克隆列表接口','system:voice-clone:api:list','api',NULL,NULL,NULL,1,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (117,115,'克隆创建接口','system:voice-clone:api:create','api',NULL,NULL,NULL,2,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (118,115,'克隆删除接口','system:voice-clone:api:delete','api',NULL,NULL,NULL,3,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
 /*!40000 ALTER TABLE `sys_permission` ENABLE KEYS */;
 
 /*!40000 ALTER TABLE `sys_template` DISABLE KEYS */;

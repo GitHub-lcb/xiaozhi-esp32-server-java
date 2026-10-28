@@ -68,6 +68,21 @@ public class PersonaFactory {
     @Resource
     private StorageServiceFactory storageServiceFactory;
 
+    @Resource
+    private com.xiaozhi.ai.knowledge.KnowledgeContextProvider knowledgeContextProvider;
+
+    @Resource
+    private com.xiaozhi.ai.memory.MemoryFactProvider memoryFactProvider;
+
+    @Resource
+    private com.xiaozhi.ai.tool.ToolFillerProvider toolFillerProvider;
+
+    @Resource
+    private com.xiaozhi.stats.service.DialogueMetricService dialogueMetricService;
+
+    @Resource
+    private com.xiaozhi.ai.tool.ToolSelector toolSelector;
+
     /**
      * 构建完整的 Persona 实例。
      * ToolCallbacks 由 Persona.chatStream() 每轮通过 session.getToolsSessionHolder().getAllFunction() 动态获取，
@@ -125,6 +140,12 @@ public class PersonaFactory {
                 .synthesizer(synthesizer)
                 .player(session.getPlayer())
                 .listener(dialogueListener)
+                .knowledgeContextProvider(knowledgeContextProvider)
+                .memoryFactProvider(memoryFactProvider)
+                .toolFillerProvider(toolFillerProvider)
+                .dialogueMetricService(dialogueMetricService)
+                .toolSelector(toolSelector)
+                .roleId(role.getRoleId())
                 .build();
         session.setPersona(persona);
         return persona;

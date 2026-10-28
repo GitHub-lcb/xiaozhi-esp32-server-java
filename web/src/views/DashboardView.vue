@@ -32,6 +32,59 @@
       </div>
     </a-card>
 
+    <!-- 监控概览 -->
+    <a-row :gutter="[20, 20]" class="content-row">
+      <a-col :xs="24">
+        <a-card :bordered="false" :title="t('dashboard.monitor')">
+          <a-row :gutter="16">
+            <a-col :xs="12" :md="6">
+              <a-statistic :title="t('dashboard.monitorDeviceTotal')" :value="overview.deviceTotal" />
+            </a-col>
+            <a-col :xs="12" :md="6">
+              <a-statistic :title="t('dashboard.monitorDeviceOnline')" :value="overview.deviceOnline" />
+            </a-col>
+            <a-col :xs="12" :md="6">
+              <a-statistic :title="t('dashboard.monitorMessageToday')" :value="overview.messageToday" />
+            </a-col>
+            <a-col :xs="12" :md="6">
+              <a-statistic :title="t('dashboard.monitorMessage7d')" :value="overview.message7d" />
+            </a-col>
+          </a-row>
+          <a-row :gutter="16" class="monitor-second-row">
+            <a-col :xs="12" :md="6">
+              <a-statistic :title="t('dashboard.monitorTurns')" :value="dialogue.turns" />
+            </a-col>
+            <a-col :xs="12" :md="6">
+              <a-statistic :title="t('dashboard.monitorTokens')" :value="dialogue.totalTokens" />
+            </a-col>
+            <a-col :xs="12" :md="6">
+              <a-statistic
+                :title="t('dashboard.monitorLatency')"
+                :value="dialogue.avgLatencyMs"
+                suffix="ms"
+              />
+            </a-col>
+            <a-col :xs="24" :md="6">
+              <div class="top-devices">
+                <div class="top-devices__title">{{ t('dashboard.monitorTopDevices') }}</div>
+                <div v-for="item in topDevices" :key="item.deviceId" class="top-devices__row">
+                  <span class="ellipsis-text">{{ item.deviceId }}</span>
+                  <span class="top-devices__count">{{ item.total }}</span>
+                </div>
+              </div>
+            </a-col>
+          </a-row>
+          <div class="daily-bars">
+            <div v-for="point in daily" :key="point.day" class="daily-bar">
+              <div class="daily-bar__value">{{ point.total }}</div>
+              <div class="daily-bar__fill" :style="{ height: barHeight(point.total) }"></div>
+              <div class="daily-bar__label">{{ point.day.slice(5) }}</div>
+            </div>
+          </div>
+        </a-card>
+      </a-col>
+    </a-row>
+
     <!-- 内容区域 -->
     <a-row :gutter="[20, 20]" class="content-row">
       <!-- 聊天记录 -->
@@ -92,9 +145,53 @@ import jsonp from 'jsonp'
 import type { Device } from '@/types/device'
 import type { Message } from '@/types/message'
 import request from '@/services/request'
+import {
+  fetchDailyMessages,
+  fetchDialogueStats,
+  fetchOverview,
+  fetchTopDevices,
+  type DailyPoint,
+  type DialogueStats,
+  type StatsOverview,
+} from '@/services/stats'
 import api from '@/services/api'
 
 const { t } = useI18n()
+
+// 监控概览：与页面其余统计分开加载，接口失败不影响欢迎区
+const overview = ref<StatsOverview>({
+  deviceTotal: 0,
+  deviceOnline: 0,
+  messageToday: 0,
+  message7d: 0,
+  activeDevices7d: 0,
+})
+const daily = ref<DailyPoint[]>([])
+const dialogue = ref<DialogueStats>({ turns: 0, totalTokens: 0, avgLatencyMs: 0 })
+const topDevices = ref<Array<{ deviceId: string; total: number }>>([])
+
+const maxDaily = computed(() => Math.max(1, ...daily.value.map((point) => point.total)))
+
+function barHeight(total: number) {
+  return `${Math.round((total / maxDaily.value) * 100)}%`
+}
+
+async function loadMonitor() {
+  try {
+    const [overviewResp, dailyResp, dialogueResp, topResp] = await Promise.all([
+      fetchOverview(),
+      fetchDailyMessages(7),
+      fetchDialogueStats(7),
+      fetchTopDevices(7, 3),
+    ])
+    if (overviewResp.data) overview.value = overviewResp.data
+    daily.value = dailyResp.data || []
+    if (dialogueResp.data) dialogue.value = dialogueResp.data
+    topDevices.value = topResp.data || []
+  } catch (error) {
+    // 监控数据是锦上添花，失败时保持 0，不打断页面
+  }
+}
 const userStore = useUserStore()
 const { getAvatarUrl } = useAvatar()
 
@@ -286,13 +383,72 @@ onMounted(async () => {
     getSentence(),
     fetchDevices(),
     fetchMessages(),
-    fetchStats()
+    fetchStats(),
+    loadMonitor()
   ])
   loading.value = false
 })
 </script>
 
 <style scoped lang="scss">
+.monitor-second-row {
+  margin-top: 16px;
+}
+
+.top-devices__title {
+  font-size: 14px;
+  color: #8c8c8c;
+  margin-bottom: 6px;
+}
+
+.top-devices__row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #595959;
+}
+
+.top-devices__count {
+  font-weight: 600;
+}
+
+.daily-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  height: 120px;
+  margin-top: 20px;
+}
+
+.daily-bar {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+}
+
+.daily-bar__value {
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+.daily-bar__fill {
+  width: 100%;
+  max-width: 36px;
+  min-height: 2px;
+  background: #1677ff;
+  border-radius: 4px 4px 0 0;
+  transition: height 0.3s ease;
+}
+
+.daily-bar__label {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
 .dashboard-view {
   padding: 24px;
   max-width: 1600px;

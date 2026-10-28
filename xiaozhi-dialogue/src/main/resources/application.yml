@@ -23,6 +23,23 @@ spring:
     active: dev
 
 # ============================================================
+# MQTT 设备通道：设备断电断网不像 WebSocket 有明确的关闭事件，
+# 靠心跳续期 + 巡检置离线；关闭时 dialogue 不连 broker，设备继续走 WebSocket
+# ============================================================
+xiaozhi:
+  mqtt:
+    enabled: ${XIAOZHI_MQTT_ENABLED:false}
+    broker-url: ${XIAOZHI_MQTT_BROKER_URL:tcp://127.0.0.1:1883}
+    # 下发给设备的 broker 地址，留空复用 broker-url（Docker 内网地址设备访问不到时要单独配）
+    public-endpoint: ${XIAOZHI_MQTT_PUBLIC_ENDPOINT:}
+    client-id: ${XIAOZHI_MQTT_CLIENT_ID:xiaozhi-dialogue}
+    username: ${XIAOZHI_MQTT_USERNAME:}
+    password: ${XIAOZHI_MQTT_PASSWORD:}
+    topic-template: ${XIAOZHI_MQTT_TOPIC_TEMPLATE:devices/p2p/{deviceId}}
+    qos: ${XIAOZHI_MQTT_QOS:1}
+    presence-ttl-seconds: ${XIAOZHI_MQTT_PRESENCE_TTL:120}
+
+# ============================================================
 # Sa-Token（共用字段见 application-common.yml）
 # ============================================================
 sa-token:

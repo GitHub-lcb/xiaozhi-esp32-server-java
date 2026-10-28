@@ -28,6 +28,12 @@ export default {
     localStt: '/role/localStt',
   },
   template: '/template',
+  // 固件升级：版本库、升级任务、升级记录
+  firmware: {
+    root: '/firmware',
+    release: '/firmware/release',
+    upgradeLog: '/firmware/upgrade-log',
+  },
   message: {
     root: '/message',
   },
@@ -44,6 +50,16 @@ export default {
     disabledTools: '/mcpTool/role',          // GET /mcpTool/role/{roleId}/disabled-tools
     systemGlobalTools: '/mcpTool/system-global',
   },
+  push: '/push',
+  reminder: '/reminder',
+  knowledge: '/knowledge',
+  voiceprint: '/voiceprint',
+  memoryFact: '/memory-fact',
+  memoryGraph: '/memory-graph',
+  voiceClone: '/voice-clone',
+  theme: '/theme',
+  deviceGroup: '/device-group',
+  plugin: '/plugin',
   upload: '/file/upload',
   memory: {
     summary: '/memory/summary',

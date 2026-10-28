@@ -31,6 +31,12 @@
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-starter-mcp-client</artifactId>
         </dependency>
+        <!-- MQTT 设备通道（主动唤醒 / 主动推送的传输层） -->
+        <dependency>
+            <groupId>org.eclipse.paho</groupId>
+            <artifactId>org.eclipse.paho.client.mqttv3</artifactId>
+            <version>1.2.5</version>
+        </dependency>
         <dependency>
             <groupId>dev.onvoid.webrtc</groupId>
             <artifactId>webrtc-java</artifactId>
@@ -106,6 +112,13 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- 测试内嵌 MQTT broker：MQTT 通道的端到端用例不用外部 EMQX -->
+        <dependency>
+            <groupId>io.moquette</groupId>
+            <artifactId>moquette-broker</artifactId>
+            <version>0.17</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

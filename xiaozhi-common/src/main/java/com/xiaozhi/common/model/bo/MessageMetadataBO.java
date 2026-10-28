@@ -25,6 +25,9 @@ import lombok.NoArgsConstructor;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class MessageMetadataBO {
 
+    /** 声纹识别出的说话人称呼，未识别或未注册时为空 */
+    private String speaker;
+
     /**
      * Spring AI {@code UserMessage.metadata} Map 里存放本对象用的 key。
      * Write/Read 路径统一通过该 key 在 UserMessage 上附带元数据：

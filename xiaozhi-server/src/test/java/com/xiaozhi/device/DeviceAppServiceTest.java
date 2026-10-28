@@ -79,6 +79,16 @@ class DeviceAppServiceTest {
     private MessageService messageService;
     @Mock
     private SummaryService summaryService;
+    @Mock
+    private com.xiaozhi.firmware.service.FirmwareService firmwareService;
+    @Mock
+    private com.xiaozhi.firmware.service.FirmwareReleaseService firmwareReleaseService;
+    @Mock
+    private com.xiaozhi.firmware.service.FirmwareUpgradeLogService firmwareUpgradeLogService;
+    @Mock
+    private com.xiaozhi.server.metrics.OtaMetrics otaMetrics;
+    @Mock
+    private com.xiaozhi.channel.service.DeviceChannelService deviceChannelService;
 
     private DeviceAppService deviceAppService;
 
@@ -94,6 +104,15 @@ class DeviceAppServiceTest {
         ReflectionTestUtils.setField(deviceAppService, "deviceAuthService", deviceAuthService);
         ReflectionTestUtils.setField(deviceAppService, "messageService", messageService);
         ReflectionTestUtils.setField(deviceAppService, "summaryService", summaryService);
+        ReflectionTestUtils.setField(deviceAppService, "firmwareService", firmwareService);
+        ReflectionTestUtils.setField(deviceAppService, "firmwareReleaseService", firmwareReleaseService);
+        ReflectionTestUtils.setField(deviceAppService, "firmwareUpgradeLogService", firmwareUpgradeLogService);
+        ReflectionTestUtils.setField(deviceAppService, "otaMetrics", otaMetrics);
+        ReflectionTestUtils.setField(deviceAppService, "deviceChannelService", deviceChannelService);
+        // OTA 默认没有命中升级任务，MQTT 通道默认关闭：老用例断言的是这条默认路径
+        lenient().when(firmwareReleaseService.resolveForDevice(any(), any(), any())).thenReturn(Optional.empty());
+        ReflectionTestUtils.setField(deviceAppService, "mqttProperties",
+                new com.xiaozhi.communication.mqtt.MqttProperties());
         DeviceBO boundDevice = new DeviceBO();
         boundDevice.setDeviceId(DEVICE_ID);
         boundDevice.setDeviceName("客厅音箱");

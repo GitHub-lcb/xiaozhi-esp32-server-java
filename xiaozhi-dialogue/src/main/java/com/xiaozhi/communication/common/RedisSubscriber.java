@@ -90,6 +90,12 @@ public class RedisSubscriber {
     private DeviceMcpService deviceMcpService;
 
     @Resource
+    private com.xiaozhi.command.service.DeviceCommandService deviceCommandService;
+
+    @Resource
+    private com.xiaozhi.screenshot.service.DeviceScreenshotService deviceScreenshotService;
+
+    @Resource
     private StringRedisTemplate stringRedisTemplate;
 
     @Resource
@@ -140,6 +146,8 @@ public class RedisSubscriber {
         addListener(container, "onCloseSession", RedisBroadcast.CHANNEL_CLOSE_SESSION);
         addListener(container, "onRoleUpdated", RedisBroadcast.CHANNEL_ROLE_UPDATED);
         addListener(container, "onDeviceUpdated", RedisBroadcast.CHANNEL_DEVICE_UPDATED);
+        addListener(container, "onDevicePush", RedisBroadcast.CHANNEL_DEVICE_PUSH);
+        addListener(container, "onDeviceCommand", RedisBroadcast.CHANNEL_DEVICE_COMMAND);
 
         return container;
     }
@@ -217,6 +225,84 @@ public class RedisSubscriber {
             }
         } catch (Exception e) {
             log.error("处理 roleUpdated 广播失败", e);
+        }
+    }
+
+    /**
+     * 远程控制：调用设备 MCP 工具，并把执行结果回填到指令记录。
+     * <p>
+     * 设备不在本实例时这条广播没人处理，记录会一直停在「已下发」——
+     * 下发方已按通道在线状态筛过，正常情况下不会出现。
+     */
+    public void onDeviceCommand(String message) {
+        Long commandId = null;
+        try {
+            Map<String, Object> payload = JsonUtil.fromJson(message, new TypeReference<>() {});
+            if (payload == null) {
+                return;
+            }
+            String deviceId = (String) payload.get("deviceId");
+            String toolName = (String) payload.get("toolName");
+            commandId = payload.get("commandId") == null ? null : Long.valueOf(payload.get("commandId").toString());
+            if (deviceId == null || toolName == null) {
+                return;
+            }
+            Map<String, Object> args = parseArguments((String) payload.get("arguments"));
+            Map<String, Object> result = deviceMcpService.callDeviceTool(deviceId, toolName, args);
+            deviceCommandService.markResult(commandId, true, JsonUtil.toJson(result));
+            // 截图指令额外回填截图记录；非截图指令在服务端会被直接忽略
+            deviceScreenshotService.completeByCommand(commandId, result, null);
+            log.info("远程控制执行成功 deviceId={} tool={}", deviceId, toolName);
+        } catch (Exception e) {
+            log.warn("远程控制执行失败 commandId={}", commandId, e);
+            if (commandId != null) {
+                deviceCommandService.markResult(commandId, false, e.getMessage());
+                deviceScreenshotService.completeByCommand(commandId, null, e.getMessage());
+            }
+        }
+    }
+
+    private Map<String, Object> parseArguments(String arguments) {
+        if (arguments == null || arguments.isBlank()) {
+            return Map.of();
+        }
+        try {
+            Map<String, Object> parsed = JsonUtil.fromJson(arguments, new TypeReference<>() {});
+            return parsed == null ? Map.of() : parsed;
+        } catch (Exception e) {
+            return Map.of();
+        }
+    }
+
+    /**
+     * 主动推送：设备在本实例上就直接播报，不在就忽略（发送方已按通道在线状态筛过目标）。
+     * 播报走固定文本合成，不过 LLM，避免把通知当成用户提问去回答。
+     */
+    public void onDevicePush(String message) {
+        try {
+            Map<String, Object> payload = JsonUtil.fromJson(message, new TypeReference<>() {});
+            if (payload == null) {
+                return;
+            }
+            String deviceId = (String) payload.get("deviceId");
+            String text = (String) payload.get("text");
+            if (deviceId == null || text == null || text.isBlank()) {
+                return;
+            }
+            ChatSession session = sessionManager.getSessionByDeviceId(deviceId);
+            if (session == null || !session.isAudioChannelOpen()) {
+                log.debug("推送目标设备不在本实例或音频通道未打开 - deviceId: {}", deviceId);
+                return;
+            }
+            Persona persona = session.getPersona();
+            if (persona == null) {
+                log.debug("设备会话尚未建立 Persona，忽略本次推送 - deviceId: {}", deviceId);
+                return;
+            }
+            persona.speakNow(text);
+            log.info("已下发主动推送 - deviceId: {}, pushId: {}", deviceId, payload.get("pushId"));
+        } catch (Exception e) {
+            log.error("处理主动推送广播失败", e);
         }
     }
 

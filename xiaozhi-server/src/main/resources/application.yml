@@ -59,6 +59,55 @@ xiaozhi:
   communication:
     # OTA 下发的 WS 二进制帧版本：1=裸Opus，2=带时间戳(服务端AEC需要)，3=带长度头无时间戳
     websocket-protocol-version: 2
+  # 运维端点：令牌只放行 /actuator/health 与 /actuator/prometheus，留空则只认登录态
+  ops:
+    token: ${XIAOZHI_OPS_TOKEN:}
+  # MCP 接入点：把服务端工具以 SSE 暴露给外部客户端（如 Claude Desktop / Cursor）
+  mcp:
+    server:
+      # 写操作（让设备播报通知）默认关闭，避免外部客户端误触发
+      allow-write: ${XIAOZHI_MCP_ALLOW_WRITE:false}
+  # MQTT 设备通道：这里只用它给设备下发 OTA 里的 mqtt 块，连 broker 的是 dialogue
+  mqtt:
+    enabled: ${XIAOZHI_MQTT_ENABLED:false}
+    broker-url: ${XIAOZHI_MQTT_BROKER_URL:tcp://127.0.0.1:1883}
+    public-endpoint: ${XIAOZHI_MQTT_PUBLIC_ENDPOINT:}
+    client-id: ${XIAOZHI_MQTT_CLIENT_ID:xiaozhi-dialogue}
+    username: ${XIAOZHI_MQTT_USERNAME:}
+    password: ${XIAOZHI_MQTT_PASSWORD:}
+    topic-template: ${XIAOZHI_MQTT_TOPIC_TEMPLATE:devices/p2p/{deviceId}}
+    qos: ${XIAOZHI_MQTT_QOS:1}
+    presence-ttl-seconds: ${XIAOZHI_MQTT_PRESENCE_TTL:120}
+
+# ============================================================
+# 运维指标：Prometheus 抓取 /actuator/prometheus
+# 抓取请求带不了登录态，需要配 XIAOZHI_OPS_TOKEN 并在抓取配置里带 X-Ops-Token 头
+# ============================================================
+# ============================================================
+# MCP Server（SSE 接入点）
+# 客户端连接：POST /mcp/sse 建立会话，后续消息走 /mcp/message
+# ============================================================
+spring:
+  ai:
+    mcp:
+      server:
+        name: xiaozhi-esp32-server-java
+        version: 6.2.0
+        type: SYNC
+        sse-message-endpoint: /mcp/message
+        sse-endpoint: /mcp/sse
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: never
+  metrics:
+    tags:
+      application: xiaozhi-server
 
 # ============================================================
 # SpringDoc OpenAPI 配置

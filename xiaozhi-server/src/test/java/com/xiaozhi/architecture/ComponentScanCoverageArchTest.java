@@ -65,11 +65,16 @@ class ComponentScanCoverageArchTest {
             "com.xiaozhi.agent",
             "com.xiaozhi.authrole",
             "com.xiaozhi.authrolepermission",
+            "com.xiaozhi.firmware",
             "com.xiaozhi.operationlog",
             "com.xiaozhi.permission",
+            "com.xiaozhi.push",
+            "com.xiaozhi.reminder",
             "com.xiaozhi.security",
             "com.xiaozhi.service",
             "com.xiaozhi.template",
+            "com.xiaozhi.stats",
+            "com.xiaozhi.voiceclone",
             "com.xiaozhi.user",
             "com.xiaozhi.userauth"
         )

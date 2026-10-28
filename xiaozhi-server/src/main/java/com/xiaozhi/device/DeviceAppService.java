@@ -1,7 +1,12 @@
 package com.xiaozhi.device;
 
 import com.xiaozhi.common.exception.ResourceNotFoundException;
+import com.xiaozhi.channel.service.DeviceChannelService;
 import com.xiaozhi.common.model.bo.DeviceBO;
+import com.xiaozhi.common.model.bo.DeviceChannelBO;
+import com.xiaozhi.common.model.bo.FirmwareBO;
+import com.xiaozhi.common.model.bo.FirmwareReleaseBO;
+import com.xiaozhi.common.model.bo.FirmwareUpgradeLogBO;
 import com.xiaozhi.common.model.bo.RoleBO;
 import com.xiaozhi.common.model.bo.VerifyCodeBO;
 import com.xiaozhi.common.model.req.DeviceBatchUpdateReq;
@@ -14,6 +19,7 @@ import com.xiaozhi.common.model.resp.DeviceBatchUpdateResp;
 import com.xiaozhi.common.model.resp.DeviceResp;
 import com.xiaozhi.common.model.PageResult;
 import com.xiaozhi.communication.ServerAddressProvider;
+import com.xiaozhi.communication.mqtt.MqttProperties;
 import com.xiaozhi.communication.auth.DeviceAuthService;
 import com.xiaozhi.communication.registry.DialogueServerInfo;
 import com.xiaozhi.communication.registry.DialogueServerRegistry;
@@ -22,8 +28,12 @@ import com.xiaozhi.device.domain.Device;
 import com.xiaozhi.device.domain.repository.DeviceRepository;
 import com.xiaozhi.device.domain.vo.VerifyCode;
 import com.xiaozhi.device.service.DeviceService;
+import com.xiaozhi.firmware.service.FirmwareReleaseService;
+import com.xiaozhi.firmware.service.FirmwareService;
+import com.xiaozhi.firmware.service.FirmwareUpgradeLogService;
 import com.xiaozhi.message.service.MessageService;
 import com.xiaozhi.role.service.RoleService;
+import com.xiaozhi.server.metrics.OtaMetrics;
 import com.xiaozhi.summary.service.SummaryService;
 import com.xiaozhi.utils.DateUtils;
 import com.xiaozhi.utils.IpLocationClient;
@@ -84,6 +94,24 @@ public class DeviceAppService {
     @Resource
     private SummaryService summaryService;
 
+    @Resource
+    private FirmwareService firmwareService;
+
+    @Resource
+    private FirmwareReleaseService firmwareReleaseService;
+
+    @Resource
+    private FirmwareUpgradeLogService firmwareUpgradeLogService;
+
+    @Resource
+    private OtaMetrics otaMetrics;
+
+    @Resource
+    private MqttProperties mqttProperties;
+
+    @Resource
+    private DeviceChannelService deviceChannelService;
+
     /**
      * 下发给设备的 WebSocket 二进制帧版本：v2 带时间戳，是服务端 AEC 回声对齐的前提
      */
@@ -93,10 +121,37 @@ public class DeviceAppService {
 
     public PageResult<DeviceResp> page(DevicePageReq req, Integer userId) {
         DevicePageReq r = req == null ? new DevicePageReq() : req;
-        return deviceService.page(r.getPageNo(), r.getPageSize(),
+        PageResult<DeviceResp> page = deviceService.page(r.getPageNo(), r.getPageSize(),
                 r.getDeviceId(), r.getDeviceName(), r.getRoleName(),
                 r.getState(), r.getRoleId(), userId)
             .map(deviceConvert::toResp);
+        enrichChannel(page.getList());
+        return page;
+    }
+
+    /**
+     * 列表页回填接入通道：一次批量查询，避免逐台查库。
+     */
+    private void enrichChannel(List<DeviceResp> devices) {
+        if (devices == null || devices.isEmpty()) {
+            return;
+        }
+        List<String> deviceIds = devices.stream()
+            .map(DeviceResp::getDeviceId)
+            .filter(Objects::nonNull)
+            .distinct()
+            .toList();
+        if (deviceIds.isEmpty()) {
+            return;
+        }
+        Map<String, DeviceChannelBO> channels = deviceChannelService.mapByDeviceIds(deviceIds);
+        for (DeviceResp device : devices) {
+            DeviceChannelBO channel = channels.get(device.getDeviceId());
+            if (channel != null) {
+                device.setChannel(channel.getChannel());
+                device.setChannelOnline(channel.isOnline());
+            }
+        }
     }
 
     @Transactional
@@ -300,10 +355,36 @@ public class DeviceAppService {
         Map<String, Object> otaResponse = new HashMap<>();
 
         // --- 固件信息 ---
+        // 命中升级任务时下发固件包地址，否则保持原行为（OTA 检查地址 + 占位版本），老设备不受影响
         Map<String, Object> firmwareInfo = new HashMap<>();
         firmwareInfo.put("url", serverAddressProvider.getOtaAddress());
         firmwareInfo.put("version", "1.0.0");
+        FirmwareReleaseBO upgrade = firmwareReleaseService
+            .resolveForDevice(deviceId, req.getChipModelName(), req.getVersion())
+            .orElse(null);
+        otaMetrics.recordCheck(upgrade != null);
+        if (upgrade != null) {
+            FirmwareBO target = firmwareService.getBO(upgrade.getFirmwareId());
+            if (target != null) {
+                firmwareInfo.put("url", target.getFileUrl());
+                firmwareInfo.put("version", target.getVersion());
+                if (target.getFileSize() != null && target.getFileSize() > 0) {
+                    firmwareInfo.put("size", target.getFileSize());
+                }
+                if (StringUtils.hasText(target.getMd5())) {
+                    firmwareInfo.put("md5", target.getMd5());
+                }
+                recordUpgrade(upgrade, target, deviceId, req);
+                otaMetrics.recordDelivered();
+            }
+        }
         otaResponse.put("firmware", firmwareInfo);
+        // --- MQTT 通道：启用时把 broker 地址与设备专属主题一并下发，设备可自行选择长连接通道 ---
+        Map<String, Object> mqttConfig = buildMqttConfig(deviceId);
+        if (!mqttConfig.isEmpty()) {
+            otaResponse.put("mqtt", mqttConfig);
+        }
+
         otaResponse.put("server_time", Map.of(
             "timestamp", DateUtils.millis(),
             // 分钟数。设备拿它把时间戳换算成本地时间，跟随应用所在时区
@@ -361,6 +442,40 @@ public class DeviceAppService {
         }
 
         return otaResponse;
+    }
+
+    /**
+     * 设备侧 MQTT 连接参数。设备用 publish_topic 收发消息，服务端按同一模板反解设备ID。
+     */
+    private Map<String, Object> buildMqttConfig(String deviceId) {
+        if (mqttProperties == null || !mqttProperties.isEnabled()) {
+            return Map.of();
+        }
+        Map<String, Object> mqttConfig = new HashMap<>();
+        mqttConfig.put("endpoint", mqttProperties.getPublicEndpointOrDefault());
+        mqttConfig.put("client_id", "xiaozhi-" + deviceId.replace(":", ""));
+        mqttConfig.put("publish_topic", mqttProperties.topicFor(deviceId));
+        if (StringUtils.hasText(mqttProperties.getUsername())) {
+            mqttConfig.put("username", mqttProperties.getUsername());
+            mqttConfig.put("password", mqttProperties.getPassword());
+        }
+        return mqttConfig;
+    }
+
+    /**
+     * 记一条升级下发记录。写记录失败不影响设备 OTA，异常在日志服务内部已兜住。
+     */
+    private void recordUpgrade(FirmwareReleaseBO release, FirmwareBO target, String deviceId, OtaReq req) {
+        FirmwareUpgradeLogBO upgradeLog = new FirmwareUpgradeLogBO();
+        upgradeLog.setReleaseId(release.getReleaseId());
+        upgradeLog.setFirmwareId(target.getFirmwareId());
+        upgradeLog.setDeviceId(deviceId);
+        upgradeLog.setChipModel(req.getChipModelName());
+        upgradeLog.setFromVersion(req.getVersion());
+        upgradeLog.setToVersion(target.getVersion());
+        upgradeLog.setIp(req.getIp());
+        upgradeLog.setStatus(FirmwareUpgradeLogBO.STATUS_DELIVERED);
+        firmwareUpgradeLogService.record(upgradeLog);
     }
 
     /**

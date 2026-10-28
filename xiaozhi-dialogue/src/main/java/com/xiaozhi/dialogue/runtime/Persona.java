@@ -107,6 +107,24 @@ public class Persona {
     @Getter
     private Player player;
 
+    /** 知识库检索器，为空表示不挂载知识库 */
+    private com.xiaozhi.ai.knowledge.KnowledgeContextProvider knowledgeContextProvider;
+
+    /** 当前角色ID，知识库按角色挂载 */
+    private Integer roleId;
+
+    /** 长期记忆提供方，为空表示不挂载 */
+    private com.xiaozhi.ai.memory.MemoryFactProvider memoryFactProvider;
+
+    /** 工具调用安抚词，为空表示静默等工具 */
+    private com.xiaozhi.ai.tool.ToolFillerProvider toolFillerProvider;
+
+    /** 对话指标落库，为空表示不采集 */
+    private com.xiaozhi.stats.service.DialogueMetricService dialogueMetricService;
+
+    /** 工具召回，为空表示全量下发 */
+    private com.xiaozhi.ai.tool.ToolSelector toolSelector;
+
     /**
      * 一个Session在某个时刻，只有一个活跃的Conversation。
      * 当切换角色时，Conversation应该释放新建。切换角色一般是不频繁的。
@@ -183,7 +201,11 @@ public class Persona {
             // 从 ToolsSessionHolder 获取实时工具列表（包含后注册的设备 MCP 工具）
             List<ToolCallback> liveTools = getSession().getToolsSessionHolder().getAllFunction();
 
-            List<ToolCallback> effectiveTools = useFunctionCall ? liveTools : new ArrayList<>();
+            // 工具多时按本轮问题粗排，只给模型最相关的一批
+            List<ToolCallback> selectedTools = useFunctionCall && toolSelector != null
+                ? toolSelector.select(liveTools, turn.userMessage == null ? null : turn.userMessage.getText())
+                : liveTools;
+            List<ToolCallback> effectiveTools = useFunctionCall ? selectedTools : new ArrayList<>();
 
             ChatOptions chatOptions = ToolCallingChatOptions.builder()
                     .toolCallbacks(effectiveTools)
@@ -202,14 +224,26 @@ public class Persona {
             String location = currentSession.getDevice() != null ? currentSession.getDevice().getLocation() : null;
             ConversationContext ctx = new ConversationContext(location);
             List<Message> messages = conversation.messages(ctx);
+            // 知识库：按当前角色召回，作为临时系统消息插在角色设定之后，不写进历史
+            String knowledge = resolveKnowledge(turn);
+            if (knowledge != null) {
+                messages = insertKnowledgeMessage(messages, knowledge);
+            }
+            String memoryFacts = resolveMemoryFacts(turn);
+            if (memoryFacts != null) {
+                messages = insertKnowledgeMessage(messages, memoryFacts);
+            }
             Prompt prompt = new Prompt(messages, chatOptions);
 
+            java.util.concurrent.atomic.AtomicBoolean fillerSpoken =
+                new java.util.concurrent.atomic.AtomicBoolean(false);
             Flux<ChatResponse> chatFlux = chatModel.stream(prompt)
                 .doOnError(error -> {
                     listener.onError(error);
                     failTurn(turn);
                 });
             chatFlux = chatFlux.doOnNext(chatResponse -> {
+                speakToolFiller(chatResponse, fillerSpoken);
                 // 首 token 时刻即助手消息创建时间；播放器落盘音频文件也以此关联到助手消息
                 Instant assistantMessageCreatedAt = DateUtils.instant();
                 boolean isFirst = turn.ttft.compareAndSet(null, assistantMessageCreatedAt);
@@ -249,8 +283,112 @@ public class Persona {
             }
             DialogueTurn dialogueTurn = buildTurn(turn, assistant, usage, snapshot, false);
             commitTurn(turn, dialogueTurn, snapshot.chains());
+            recordMetric(turn, usage);
             turn.completedTurn = dialogueTurn;
         }
+    }
+
+    /**
+     * 本轮知识库上下文；未挂载知识库、检索为空或失败都返回 null。
+     */
+    private String resolveKnowledge(Turn turn) {
+        if (knowledgeContextProvider == null || roleId == null || turn.userMessage == null) {
+            return null;
+        }
+        return knowledgeContextProvider.buildContext(roleId, turn.userMessage.getText());
+    }
+
+    /**
+     * 落一条轮次指标（token 用量 + 本轮耗时）。写失败只记日志，不影响对话。
+     */
+    private void recordMetric(Turn turn, Usage usage) {
+        if (dialogueMetricService == null) {
+            return;
+        }
+        try {
+            com.xiaozhi.common.model.bo.DialogueMetricBO metric = new com.xiaozhi.common.model.bo.DialogueMetricBO();
+            ChatSession currentSession = getSession();
+            if (currentSession != null && currentSession.getDevice() != null) {
+                metric.setDeviceId(currentSession.getDevice().getDeviceId());
+                metric.setRoleId(currentSession.getDevice().getRoleId());
+            }
+            metric.setSessionId(sessionId);
+            if (usage != null) {
+                metric.setPromptTokens(usage.getPromptTokens());
+                metric.setCompletionTokens(usage.getCompletionTokens());
+                metric.setTotalTokens(usage.getTotalTokens());
+            }
+            long elapsed = DateUtils.instant().toEpochMilli() - turn.startedAt.toEpochMilli();
+            metric.setLatencyMs(Math.max(0, elapsed));
+            dialogueMetricService.record(metric);
+        } catch (RuntimeException e) {
+            log.debug("记录对话指标失败，忽略", e);
+        }
+    }
+
+    /**
+     * 第一次出现工具调用时垫一句安抚词，同一轮只说一次；没配文案或没工具调用就什么都不做。
+     */
+    private void speakToolFiller(ChatResponse chatResponse, java.util.concurrent.atomic.AtomicBoolean spoken) {
+        try {
+            if (toolFillerProvider == null || spoken.get() || chatResponse == null
+                || chatResponse.getResult() == null || chatResponse.getResult().getOutput() == null
+                || !chatResponse.hasToolCalls()) {
+                return;
+            }
+            String filler = toolFillerProvider.next();
+            if (filler == null) {
+                return;
+            }
+            spoken.set(true);
+            synthesizer.synthesize(filler);
+        } catch (RuntimeException e) {
+            log.debug("安抚词播放失败，忽略", e);
+        }
+    }
+
+    /**
+     * 本轮长期记忆；没挂载、没记忆或加载失败都返回 null。
+     */
+    private String resolveMemoryFacts(Turn turn) {
+        if (memoryFactProvider == null || turn.userMessage == null) {
+            return null;
+        }
+        ChatSession session = getSession();
+        if (session == null || session.getDevice() == null) {
+            return null;
+        }
+        return memoryFactProvider.buildContext(session.getDevice().getUserId(), speakerOf(turn.userMessage));
+    }
+
+    /**
+     * 声纹识别出的说话人；没认出来时返回 null，只注入全家记忆。
+     */
+    static String speakerOf(org.springframework.ai.chat.messages.UserMessage userMessage) {
+        if (userMessage == null || userMessage.getMetadata() == null) {
+            return null;
+        }
+        Object meta = userMessage.getMetadata()
+            .get(com.xiaozhi.common.model.bo.MessageMetadataBO.METADATA_KEY);
+        if (meta instanceof com.xiaozhi.common.model.bo.MessageMetadataBO bo) {
+            return StringUtils.hasText(bo.getSpeaker()) ? bo.getSpeaker() : null;
+        }
+        return null;
+    }
+
+    /**
+     * 插在系统提示词之后、摘要与历史之前：紧跟角色设定，模型更容易把它当成"背景事实"而不是对话内容。
+     */
+    static List<Message> insertKnowledgeMessage(List<Message> messages, String knowledge) {
+        List<Message> result = new ArrayList<>(messages.size() + 1);
+        if (messages.isEmpty()) {
+            result.add(new org.springframework.ai.chat.messages.SystemMessage(knowledge));
+            return result;
+        }
+        result.add(messages.get(0));
+        result.add(new org.springframework.ai.chat.messages.SystemMessage(knowledge));
+        result.addAll(messages.subList(1, messages.size()));
+        return result;
     }
 
     /**
@@ -548,6 +686,26 @@ public class Persona {
      * 话术由调用方给定：用户主动告别用告别语，服务端超时退出用超时提示语——
      * 超时时没人说过话，应答式的告别语（"好的""收到"）在那个语境下不成立。
      */
+    /**
+     * 播报一段固定文本（主动推送）：不过 LLM，直接合成并播放。
+     * <p>
+     * 与告别流程的区别是不关会话：播完回到 IDLE，设备可以继续正常对话。
+     */
+    public void speakNow(String text) {
+        ChatSession session = getSession();
+        if (session == null || !session.isOpen() || !session.isAudioChannelOpen()) {
+            return;
+        }
+        if (!StringUtils.hasText(text)) {
+            return;
+        }
+        session.transitionTo(com.xiaozhi.enums.DeviceState.SPEAKING);
+        if (player != null) {
+            player.setFunctionAfterChat(() -> session.transitionTo(com.xiaozhi.enums.DeviceState.IDLE));
+        }
+        synthesizer.synthesize(text);
+    }
+
     public void sendFarewell(String farewell) {
         ChatSession session = getSession();
         if (session == null || !session.isAudioChannelOpen()){

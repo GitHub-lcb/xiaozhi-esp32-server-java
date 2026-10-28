@@ -1,6 +1,13 @@
 import { http } from './request'
 import api from './api'
-import type { Device, DeviceQueryParams } from '@/types/device'
+import type {
+  Device,
+  DeviceCommand,
+  DeviceCommandRequest,
+  DeviceQueryParams,
+  DeviceScreenshot,
+  DeviceSelfCheck,
+} from '@/types/device'
 
 /**
  * 查询设备列表
@@ -29,6 +36,41 @@ export function updateDevice(data: Partial<Device>) {
  */
 export function deleteDevice(deviceId: string) {
   return http.delete(`${api.device}/${deviceId}`)
+}
+
+/**
+ * 设备接入一键自检
+ */
+export function selfCheckDevice(deviceId: string) {
+  return http.get<DeviceSelfCheck>(`${api.device}/${deviceId}/self-check`)
+}
+
+/**
+ * 下发设备控制指令（重启 / 音量 / 自定义工具）
+ */
+export function sendDeviceCommand(deviceId: string, data: DeviceCommandRequest) {
+  return http.post<DeviceCommand>(`${api.device}/${deviceId}/command`, data)
+}
+
+/**
+ * 触发一次设备截图
+ */
+export function captureDeviceScreenshot(deviceId: string) {
+  return http.post<DeviceScreenshot>(`${api.device}/${deviceId}/screenshot`, {})
+}
+
+/**
+ * 查询设备截图记录
+ */
+export function queryDeviceScreenshots(params: { deviceId?: string; pageNo?: number; pageSize?: number }) {
+  return http.getPage<DeviceScreenshot>(`${api.device}/screenshot-log`, params)
+}
+
+/**
+ * 查询设备指令记录
+ */
+export function queryDeviceCommands(params: { deviceId?: string; pageNo?: number; pageSize?: number }) {
+  return http.getPage<DeviceCommand>(`${api.device}/command-log`, params)
 }
 
 /**

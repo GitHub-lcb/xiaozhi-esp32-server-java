@@ -57,11 +57,12 @@ public final class UserMessageAssembler {
         MessageMetadataBO bo = meta != null && meta.get(MessageMetadataBO.METADATA_KEY) instanceof MessageMetadataBO b
                 ? b : null;
         String emotion = bo != null ? bo.getEmotion() : null;
-        if (timestamp == null && !StringUtils.hasText(emotion)) {
+        String speaker = bo != null ? bo.getSpeaker() : null;
+        if (timestamp == null && !StringUtils.hasText(emotion) && !StringUtils.hasText(speaker)) {
             return um;
         }
         return UserMessage.builder()
-                .text(assemble(um.getText(), timestamp, emotion))
+                .text(assemble(um.getText(), timestamp, speaker, emotion))
                 .metadata(meta == null ? new HashMap<>() : new HashMap<>(meta))
                 .build();
     }
@@ -70,10 +71,21 @@ public final class UserMessageAssembler {
      * 低阶：纯字符串拼接，外部一般不直接用。
      */
     public static String assemble(String text, Instant timestamp, String emotion) {
+        return assemble(text, timestamp, null, emotion);
+    }
+
+    /**
+     * 带说话人的版本：字段顺序固定为 时间 → 说话人 → 情绪，缺省跳过对应方括号。
+     * 说话人来自声纹识别，没认出来时不加方括号，模型看到的就是原来那种前缀。
+     */
+    public static String assemble(String text, Instant timestamp, String speaker, String emotion) {
         StringBuilder sb = new StringBuilder();
         if (timestamp != null) {
             LocalDateTime ldt = DateUtils.toDateTime(timestamp);
             sb.append('[').append(ldt.format(TIMESTAMP_FORMATTER)).append(']');
+        }
+        if (StringUtils.hasText(speaker)) {
+            sb.append("[说话人:").append(speaker.trim()).append(']');
         }
         if (StringUtils.hasText(emotion)) {
             sb.append('[').append(emotion).append(']');

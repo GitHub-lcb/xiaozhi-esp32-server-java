@@ -74,6 +74,15 @@ public class DialogueService{
     private PersonaFactory personaFactory;
 
     @Resource
+    private com.xiaozhi.ai.voiceprint.SpeakerIdentifier speakerIdentifier;
+
+    @Resource
+    private com.xiaozhi.devicegroup.service.DeviceGroupService deviceGroupService;
+
+    @Resource
+    private com.xiaozhi.ai.coordination.WakeCoordinator wakeCoordinator;
+
+    @Resource
     private MessageSender messageService;
 
     @Resource
@@ -511,7 +520,12 @@ public class DialogueService{
                 return;
             }
 
+            // 先把唤醒词音频落盘/清空，再判断是否应答：被抑制的设备也要清空缓冲，否则下一轮会带上旧音频
             saveWakeWordAudio(session);
+            // 同空间多设备就近应答：窗口期内已有别的设备应答时，本设备保持沉默
+            if (!shouldAnswerWake(session, text)) {
+                return;
+            }
             personaFactory.buildPersona(session).chat(text, false);
         } catch (Exception e) {
             log.error("处理唤醒词失败: {}", e.getMessage(), e);
@@ -539,7 +553,7 @@ public class DialogueService{
 
             String text = sttResult.text();
 
-            UserMessage userMessage = buildUserMessage(text, sttResult);
+            UserMessage userMessage = buildUserMessage(text, sttResult, identifySpeaker(session));
 
             // 意图检测
             if (intentService.detect(text) == IntentService.Intent.EXIT) {
@@ -571,15 +585,16 @@ public class DialogueService{
      * @param text     用户裸文本
      * @param sttResult STT 结果，可能含情绪信息
      */
-    private static UserMessage buildUserMessage(String text, SttResult sttResult) {
+    private UserMessage buildUserMessage(String text, SttResult sttResult, String speaker) {
         MessageMetadataBO metadataBO = MessageMetadataBO.builder()
+                .speaker(StringUtils.hasText(speaker) ? speaker : null)
                 .emotion(sttResult.hasEmotion() ? sttResult.emotion() : null)
                 .emotionScore(sttResult.hasEmotion() ? sttResult.emotionScore() : null)
                 .emotionDegree(sttResult.hasEmotion() ? sttResult.emotionDegree() : null)
                 .build();
         Map<String, Object> msgMeta = new HashMap<>();
         // 只要任一字段有值就挂载；全空时不挂，保持 UserMessage.metadata 干净
-        if (StringUtils.hasText(metadataBO.getEmotion())) {
+        if (StringUtils.hasText(metadataBO.getEmotion()) || StringUtils.hasText(metadataBO.getSpeaker())) {
             msgMeta.put(MessageMetadataBO.METADATA_KEY, metadataBO);
         }
         UserMessage userMessage = UserMessage.builder().text(text).metadata(msgMeta).build();
@@ -594,6 +609,53 @@ public class DialogueService{
      *
      * @param session WebSocket会话
      */
+    /**
+     * 同组设备是否由本设备应答。没有分组、协处理器缺失或 Redis 异常时一律放行——
+     * 设备叫醒不了比多台一起应答更糟。
+     */
+    private boolean shouldAnswerWake(ChatSession session, String text) {
+        try {
+            if (deviceGroupService == null || wakeCoordinator == null) {
+                return true;
+            }
+            String deviceId = session.getDevice() == null ? null : session.getDevice().getDeviceId();
+            Long groupId = deviceGroupService.groupIdOf(deviceId);
+            if (groupId == null) {
+                return true;
+            }
+            boolean acquired = wakeCoordinator.tryAcquire(groupId, deviceId);
+            if (!acquired) {
+                log.info("同组已有设备应答，本设备跳过 deviceId={} groupId={} text={}", deviceId, groupId, text);
+            }
+            return acquired;
+        } catch (RuntimeException e) {
+            log.warn("唤醒协同判定失败，按单设备处理", e);
+            return true;
+        }
+    }
+
+    /**
+     * 说话人识别：拿本轮录音比对已注册声纹；任何异常都按「未知说话人」处理，不影响对话。
+     */
+    private String identifySpeaker(ChatSession session) {
+        try {
+            if (session == null || session.getDevice() == null || session.getUserSpeechAudio() == null) {
+                return null;
+            }
+            Integer userId = session.getDevice().getUserId();
+            if (userId == null) {
+                return null;
+            }
+            byte[] pcm = com.xiaozhi.utils.AudioUtils.readAsPcm(
+                session.getUserSpeechAudio().localPath().toString());
+            return speakerIdentifier.identify(userId, com.xiaozhi.utils.AudioUtils.pcm16ToFloats(pcm))
+                .orElse(null);
+        } catch (Exception e) {
+            log.debug("说话人识别不可用，本轮按未知说话人处理", e);
+            return null;
+        }
+    }
+
     public void sendGoodbyeMessage(ChatSession session) {
         if (session == null || !session.isAudioChannelOpen()) {
             return;

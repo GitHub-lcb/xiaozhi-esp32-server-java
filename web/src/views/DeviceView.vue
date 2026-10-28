@@ -7,12 +7,31 @@ import { useTable } from '@/composables/useTable'
 import { useInlineEdit } from '@/composables/useInlineEdit'
 import { useRequest } from '@/composables/useRequest'
 import { useMemoryView } from '@/composables/useMemoryView'
-import { queryDevices, addDevice, updateDevice, deleteDevice, clearDeviceMemory } from '@/services/device'
+import {
+  queryDevices,
+  addDevice,
+  updateDevice,
+  deleteDevice,
+  clearDeviceMemory,
+  selfCheckDevice,
+  sendDeviceCommand,
+  queryDeviceCommands,
+  captureDeviceScreenshot,
+  queryDeviceScreenshots,
+} from '@/services/device'
 import { queryRoles } from '@/services/role'
 import DeviceEditDialog from '@/components/DeviceEditDialog.vue'
 import TableActionButtons from '@/components/TableActionButtons.vue'
 import TableEmptyState from '@/components/TableEmptyState.vue'
-import type { Device, DeviceQueryParams } from '@/types/device'
+import type {
+  Device,
+  DeviceCommand,
+  DeviceCommandRequest,
+  DeviceQueryParams,
+  DeviceScreenshot,
+  DeviceSelfCheck,
+  SelfCheckItem,
+} from '@/types/device'
 import type { Role } from '@/types/role'
 import type { TableColumnsType } from 'ant-design-vue'
 
@@ -26,6 +45,146 @@ const { loading: clearingMemory, executeOk: executeClearMemory } = useRequest()
 const { execute: executeQueryRoles } = useRequest()
 const { executeOk: executeDeleteDevice } = useRequest()
 const { executeOk: executeUpdateDevice } = useRequest()
+
+// 接入自检：结果放在弹窗里，loading 单独一份，不影响列表
+// 远程控制：动作 + 记录，记录只取该设备最近 20 条
+// 截图：列表 + 当前设备
+const screenshotVisible = ref(false)
+const screenshotLoading = ref(false)
+const screenshotDeviceId = ref('')
+const screenshots = ref<DeviceScreenshot[]>([])
+
+const commandVisible = ref(false)
+const commandSubmitting = ref(false)
+const commandDeviceId = ref('')
+const commandHistory = ref<DeviceCommand[]>([])
+const commandForm = reactive<DeviceCommandRequest>({ action: 'reboot', volume: 50 })
+
+const selfCheckVisible = ref(false)
+const selfCheckLoading = ref(false)
+const selfCheckResult = ref<DeviceSelfCheck | null>(null)
+
+const summaryAlertType = computed(() => {
+  const summary = selfCheckResult.value?.summary
+  if (summary === 'fail') return 'error'
+  if (summary === 'warn') return 'warning'
+  return 'success'
+})
+
+const summaryText = computed(() => {
+  const result = selfCheckResult.value
+  if (!result) return ''
+  return `${t('device.selfCheck.summary')}：${t(`device.selfCheck.summaryStatus.${result.summary}`)}（`
+    + `${t('device.selfCheck.passed')} ${result.passed} / ${t('device.selfCheck.warned')} ${result.warned} / `
+    + `${t('device.selfCheck.failed')} ${result.failed}）`
+})
+
+function statusText(status: SelfCheckItem['status']) {
+  if (status === 'fail') return t('device.selfCheck.status.fail')
+  if (status === 'warn') return t('device.selfCheck.status.warn')
+  return t('device.selfCheck.status.pass')
+}
+
+function statusColor(status: SelfCheckItem['status']) {
+  if (status === 'fail') return 'red'
+  if (status === 'warn') return 'orange'
+  return 'green'
+}
+
+function screenshotStateLabel(state: string) {
+  if (state === '1') return t('device.screenshot.state.success')
+  if (state === '2') return t('device.screenshot.state.failed')
+  return t('device.screenshot.state.pending')
+}
+
+async function openScreenshotModal(record: Device) {
+  screenshotDeviceId.value = record.deviceId
+  screenshotVisible.value = true
+  await loadScreenshots()
+}
+
+async function loadScreenshots() {
+  if (!screenshotDeviceId.value) return
+  try {
+    const response = await queryDeviceScreenshots({ deviceId: screenshotDeviceId.value, pageNo: 1, pageSize: 10 })
+    screenshots.value = response.data?.list || []
+  } catch (error) {
+    screenshots.value = []
+  }
+}
+
+async function captureScreenshot() {
+  if (!screenshotDeviceId.value) return
+  screenshotLoading.value = true
+  try {
+    await captureDeviceScreenshot(screenshotDeviceId.value)
+    message.success(t('device.screenshot.sent'))
+    // 设备回传是异步的，稍等再拉一次列表
+    setTimeout(loadScreenshots, 1500)
+  } catch (error) {
+    message.error(t('device.screenshot.failed'))
+  } finally {
+    screenshotLoading.value = false
+  }
+}
+
+function commandStateLabel(state: string) {
+  if (state === '1') return t('device.command.state.success')
+  if (state === '2') return t('device.command.state.failed')
+  return t('device.command.state.sent')
+}
+
+async function openCommandModal(record: Device) {
+  commandDeviceId.value = record.deviceId
+  commandForm.action = 'reboot'
+  commandForm.volume = 50
+  commandForm.toolName = ''
+  commandForm.arguments = ''
+  commandVisible.value = true
+  await loadCommandHistory(record.deviceId)
+}
+
+async function loadCommandHistory(deviceId: string) {
+  try {
+    const response = await queryDeviceCommands({ deviceId, pageNo: 1, pageSize: 20 })
+    commandHistory.value = response.data?.list || []
+  } catch (error) {
+    commandHistory.value = []
+  }
+}
+
+async function submitCommand() {
+  if (!commandDeviceId.value) return
+  if (commandForm.action === 'custom' && !commandForm.toolName) {
+    message.warning(t('device.command.requiredTip'))
+    return
+  }
+  commandSubmitting.value = true
+  try {
+    await sendDeviceCommand(commandDeviceId.value, { ...commandForm })
+    message.success(t('device.command.sent'))
+    await loadCommandHistory(commandDeviceId.value)
+  } catch (error) {
+    message.error(t('device.command.sendFailed'))
+  } finally {
+    commandSubmitting.value = false
+  }
+}
+
+async function runSelfCheck(record: Device) {
+  selfCheckVisible.value = true
+  selfCheckLoading.value = true
+  selfCheckResult.value = null
+  try {
+    const response = await selfCheckDevice(record.deviceId)
+    selfCheckResult.value = response.data ?? null
+  } catch (error) {
+    message.error(t('device.selfCheck.failedToRun'))
+    selfCheckVisible.value = false
+  } finally {
+    selfCheckLoading.value = false
+  }
+}
 
 // 表格和分页：分页参数由 useTable 注入，查询条件从 queryForm 现取
 const {
@@ -164,6 +323,13 @@ const columns = computed<TableColumnsType>(() => [
     title: t('device.version'),
     dataIndex: 'version',
     width: 100,
+    align: 'center',
+  },
+  {
+    // 接入通道：WS / MQTT，点表示该通道当前是否在线
+    title: t('device.channel'),
+    dataIndex: 'channel',
+    width: 120,
     align: 'center',
   },
   {
@@ -511,6 +677,15 @@ fetchData()
             </a-tag>
           </template>
 
+          <!-- 接入通道列 -->
+          <template v-else-if="column.dataIndex === 'channel'">
+            <span v-if="!record.channel" class="channel-empty">-</span>
+            <a-tag v-else :color="record.channelOnline ? 'green' : 'default'">
+              {{ record.channel === 'mqtt' ? 'MQTT' : 'WS' }}
+              · {{ record.channelOnline ? t('device.channelOnline') : t('device.channelOffline') }}
+            </a-tag>
+          </template>
+
           <!-- 时间列 -->
           <template v-else-if="column.dataIndex === 'updateTime' || column.dataIndex === 'createTime'">
             {{ record[column.dataIndex] || '-' }}
@@ -540,6 +715,33 @@ fetchData()
             >
               <template #actions>
                 <a-button
+                  v-permission="'system:device:api:screenshot'"
+                  type="link"
+                  size="small"
+                  class="table-action-link"
+                  @click="() => openScreenshotModal(record)"
+                >
+                  {{ t('device.screenshot.button') }}
+                </a-button>
+                <a-button
+                  v-permission="'system:device:api:command'"
+                  type="link"
+                  size="small"
+                  class="table-action-link"
+                  @click="() => openCommandModal(record)"
+                >
+                  {{ t('device.command.button') }}
+                </a-button>
+                <a-button
+                  v-permission="'system:device:api:self-check'"
+                  type="link"
+                  size="small"
+                  class="table-action-link"
+                  @click="() => runSelfCheck(record)"
+                >
+                  {{ t('device.selfCheck.button') }}
+                </a-button>
+                <a-button
                   v-permission="'system:device:memory'"
                   type="link"
                   size="small"
@@ -566,6 +768,130 @@ fetchData()
       @clear-memory="handleClearMemory"
     />
 
+    <!-- 设备截图 -->
+    <a-modal
+      v-model:open="screenshotVisible"
+      :title="t('device.screenshot.title')"
+      :footer="null"
+      width="640px"
+    >
+      <div class="screenshot-toolbar">
+        <a-button type="primary" :loading="screenshotLoading" @click="captureScreenshot">
+          {{ t('device.screenshot.capture') }}
+        </a-button>
+        <span class="muted">{{ t('device.screenshot.tip') }}</span>
+      </div>
+      <a-list :data-source="screenshots" size="small" :locale="{ emptyText: t('device.screenshot.empty') }">
+        <template #renderItem="{ item }">
+          <a-list-item>
+            <a-space align="start">
+              <img
+                v-if="item.imageUrl"
+                :src="item.imageUrl"
+                class="screenshot-thumb"
+                :alt="t('device.screenshot.title')"
+              />
+              <div v-else class="screenshot-placeholder">
+                <a-tag :color="item.state === '1' ? 'green' : item.state === '2' ? 'red' : 'blue'">
+                  {{ screenshotStateLabel(item.state) }}
+                </a-tag>
+              </div>
+              <div>
+                <div>{{ item.createTime || '-' }}</div>
+                <div class="muted">{{ item.message || '' }}</div>
+              </div>
+            </a-space>
+          </a-list-item>
+        </template>
+      </a-list>
+    </a-modal>
+
+    <!-- 远程控制 -->
+    <a-modal
+      v-model:open="commandVisible"
+      :title="t('device.command.title')"
+      :confirm-loading="commandSubmitting"
+      @ok="submitCommand"
+    >
+      <a-form layout="vertical">
+        <a-form-item :label="t('device.command.action')">
+          <a-radio-group v-model:value="commandForm.action">
+            <a-radio value="reboot">{{ t('device.command.reboot') }}</a-radio>
+            <a-radio value="volume">{{ t('device.command.volume') }}</a-radio>
+            <a-radio value="custom">{{ t('device.command.custom') }}</a-radio>
+          </a-radio-group>
+        </a-form-item>
+        <a-form-item v-if="commandForm.action === 'volume'" :label="t('device.command.volumeValue')">
+          <a-slider v-model:value="commandForm.volume" :min="0" :max="100" />
+        </a-form-item>
+        <template v-if="commandForm.action === 'custom'">
+          <a-form-item :label="t('device.command.toolName')" required>
+            <a-input v-model:value="commandForm.toolName" placeholder="self.display.set_theme" />
+          </a-form-item>
+          <a-form-item :label="t('device.command.arguments')">
+            <a-textarea v-model:value="commandForm.arguments" :rows="3" placeholder='{"theme":"dark"}' />
+          </a-form-item>
+        </template>
+      </a-form>
+      <a-divider style="margin: 12px 0">{{ t('device.command.history') }}</a-divider>
+      <a-list :data-source="commandHistory" size="small" :locale="{ emptyText: t('device.command.empty') }">
+        <template #renderItem="{ item }">
+          <a-list-item>
+            <a-space>
+              <a-tag :color="item.state === '1' ? 'green' : item.state === '2' ? 'red' : 'blue'">
+                {{ commandStateLabel(item.state) }}
+              </a-tag>
+              <span>{{ item.action }}</span>
+              <span class="muted">{{ item.toolName }}</span>
+              <span class="muted">{{ item.createTime }}</span>
+            </a-space>
+          </a-list-item>
+        </template>
+      </a-list>
+    </a-modal>
+
+    <!-- 设备接入自检 -->
+    <a-modal
+      v-model:open="selfCheckVisible"
+      :title="t('device.selfCheck.title')"
+      :footer="null"
+      width="720px"
+    >
+      <a-spin :spinning="selfCheckLoading">
+        <div v-if="selfCheckResult" class="self-check">
+          <a-alert
+            :type="summaryAlertType"
+            show-icon
+            :message="summaryText"
+            class="self-check__summary"
+          />
+          <div class="self-check__meta">
+            {{ t('device.selfCheck.checkedAt') }}：{{ selfCheckResult.checkTime || '-' }}
+          </div>
+          <a-list :data-source="selfCheckResult.items" item-layout="horizontal" size="small">
+            <template #renderItem="{ item }">
+              <a-list-item>
+                <a-list-item-meta>
+                  <template #title>
+                    <a-space>
+                      <a-tag :color="statusColor(item.status)">{{ statusText(item.status) }}</a-tag>
+                      <span>{{ item.name }}</span>
+                    </a-space>
+                  </template>
+                  <template #description>
+                    <div class="self-check__detail">{{ item.detail }}</div>
+                    <div v-if="item.suggestion" class="self-check__suggestion">
+                      {{ t('device.selfCheck.suggestion') }}：{{ item.suggestion }}
+                    </div>
+                  </template>
+                </a-list-item-meta>
+              </a-list-item>
+            </template>
+          </a-list>
+        </div>
+      </a-spin>
+    </a-modal>
+
     <!-- 回到顶部 -->
     <a-back-top />
   </div>
@@ -574,6 +900,40 @@ fetchData()
 <style scoped lang="scss">
 .device-view {
   padding: 24px;
+}
+
+.channel-empty {
+  color: #bfbfbf;
+}
+
+.screenshot-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.screenshot-thumb {
+  width: 96px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid #f0f0f0;
+}
+
+.screenshot-placeholder {
+  width: 96px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed #d9d9d9;
+  border-radius: 4px;
+}
+
+.muted {
+  color: #8c8c8c;
+  font-size: 12px;
 }
 
 // 表格中的下拉框居中

@@ -28,14 +28,23 @@ import org.springframework.scheduling.annotation.EnableScheduling;
         "com.xiaozhi.communication",
         "com.xiaozhi.utils",
         // xiaozhi-service (dialogue 需要的部分)
+        "com.xiaozhi.channel",
+        "com.xiaozhi.command",
+        "com.xiaozhi.knowledge",
+        "com.xiaozhi.screenshot",
         "com.xiaozhi.config",
         "com.xiaozhi.storage",
         "com.xiaozhi.device",
+        "com.xiaozhi.devicegroup",
         "com.xiaozhi.mcptoolexclude",
+        "com.xiaozhi.memoryfact",
+        "com.xiaozhi.memorygraph",
         "com.xiaozhi.message",
         "com.xiaozhi.monitoring",
         "com.xiaozhi.role",
+        "com.xiaozhi.stats",
         "com.xiaozhi.summary",
+        "com.xiaozhi.voiceprint",
         "com.xiaozhi.task",
         "com.xiaozhi.verifycode",
         // xiaozhi-ai
@@ -48,12 +57,21 @@ import org.springframework.scheduling.annotation.EnableScheduling;
     }
 )
 @MapperScan({
+    "com.xiaozhi.channel.dal.mysql.mapper",
+    "com.xiaozhi.command.dal.mysql.mapper",
+    "com.xiaozhi.knowledge.dal.mysql.mapper",
+    "com.xiaozhi.screenshot.dal.mysql.mapper",
     "com.xiaozhi.config.dal.mysql.mapper",
     "com.xiaozhi.device.dal.mysql.mapper",
+    "com.xiaozhi.devicegroup.dal.mysql.mapper",
     "com.xiaozhi.mcptoolexclude.dal.mysql.mapper",
+    "com.xiaozhi.memoryfact.dal.mysql.mapper",
+    "com.xiaozhi.memorygraph.dal.mysql.mapper",
     "com.xiaozhi.message.dal.mysql.mapper",
     "com.xiaozhi.role.dal.mysql.mapper",
+    "com.xiaozhi.stats.dal.mysql.mapper",
     "com.xiaozhi.summary.dal.mysql.mapper",
+    "com.xiaozhi.voiceprint.dal.mysql.mapper",
     "com.xiaozhi.verifycode.dal.mysql.mapper",
 })
 public class DialogueApplication {

@@ -62,6 +62,12 @@ public class DeviceResp {
     private String version;
 
     @Schema(description = "设备 MCP 能力列表")
+    /** 最近一次使用的接入通道：websocket / mqtt，从未接入为 null */
+    private String channel;
+
+    /** 该通道当前是否在线 */
+    private Boolean channelOnline;
+
     private String mcpList;
 
     @Schema(description = "地理位置")

@@ -26,8 +26,12 @@ import com.xiaozhi.common.model.req.DevicePageReq;
 import com.xiaozhi.common.model.req.DeviceScanBindReq;
 import com.xiaozhi.common.model.req.DeviceUpdateReq;
 import com.xiaozhi.common.model.req.OtaReq;
+import com.xiaozhi.common.model.bo.DeviceSelfCheckBO;
+import com.xiaozhi.common.model.bo.SelfCheckItemBO;
 import com.xiaozhi.common.model.resp.DeviceBatchUpdateResp;
 import com.xiaozhi.common.model.resp.DeviceResp;
+import com.xiaozhi.common.model.resp.DeviceSelfCheckResp;
+import com.xiaozhi.common.model.resp.SelfCheckItemResp;
 import com.xiaozhi.common.model.PageResult;
 import com.xiaozhi.common.web.ApiResponse;
 import com.xiaozhi.common.web.TrustedProxyPolicy;
@@ -60,6 +64,105 @@ public class DeviceController extends BaseController {
 
     @Resource
     private TrustedProxyPolicy trustedProxyPolicy;
+
+    @Resource
+    private DeviceSelfCheckService deviceSelfCheckService;
+
+    @Resource
+    private com.xiaozhi.command.DeviceCommandAppService deviceCommandAppService;
+
+    @Resource
+    private com.xiaozhi.screenshot.DeviceScreenshotAppService deviceScreenshotAppService;
+
+    /**
+     * 设备远程控制：重启、设置音量、或直接调用设备 MCP 工具
+     */
+    @PostMapping("/{deviceId}/command")
+    @ResponseBody
+    @SaCheckPermission("system:device:api:command")
+    @CheckOwner(resource = "device", id = "#deviceId")
+    @AuditLog(module = "设备管理", operation = "设备远程控制")
+    @Operation(summary = "下发设备控制指令", description = "动作会翻译成设备 MCP 工具调用，离线设备直接拒绝")
+    public ApiResponse<com.xiaozhi.common.model.resp.DeviceCommandResp> sendCommand(
+            @PathVariable String deviceId,
+            @Valid @RequestBody com.xiaozhi.common.model.req.DeviceCommandReq req) {
+        return ApiResponse.success(
+            deviceCommandAppService.send(deviceId, req, StpUtil.getLoginIdAsInt()));
+    }
+
+    /**
+     * 设备截图：调用设备截图工具，图片地址由 dialogue 执行完回填
+     */
+    @PostMapping("/{deviceId}/screenshot")
+    @ResponseBody
+    @SaCheckPermission("system:device:api:screenshot")
+    @CheckOwner(resource = "device", id = "#deviceId")
+    @AuditLog(module = "设备管理", operation = "设备截图")
+    @Operation(summary = "设备截图", description = "离线设备直接拒绝，回传的图片地址异步写入记录")
+    public ApiResponse<com.xiaozhi.common.model.resp.DeviceScreenshotResp> screenshot(@PathVariable String deviceId) {
+        return ApiResponse.success(
+            deviceScreenshotAppService.capture(deviceId, StpUtil.getLoginIdAsInt()));
+    }
+
+    /**
+     * 设备截图记录
+     */
+    @GetMapping("/screenshot-log")
+    @ResponseBody
+    @SaCheckPermission("system:device:screenshot:api:list")
+    @Operation(summary = "查询设备截图记录", description = "按拍摄时间倒序")
+    public ApiResponse<PageResult<com.xiaozhi.common.model.resp.DeviceScreenshotResp>> screenshotLog(
+            @Valid com.xiaozhi.common.model.req.DeviceScreenshotPageReq req) {
+        return ApiResponse.success(deviceScreenshotAppService.page(req));
+    }
+
+    /**
+     * 设备指令记录
+     */
+    @GetMapping("/command-log")
+    @ResponseBody
+    @SaCheckPermission("system:device:command:api:list")
+    @Operation(summary = "查询设备指令记录", description = "按下发时间倒序")
+    public ApiResponse<PageResult<com.xiaozhi.common.model.resp.DeviceCommandResp>> commandLog(
+            @Valid com.xiaozhi.common.model.req.DeviceCommandPageReq req) {
+        return ApiResponse.success(deviceCommandAppService.page(req));
+    }
+
+    /**
+     * 设备接入一键自检：把「接不进来」最常见的几处判断合成一次调用
+     */
+    @GetMapping("/{deviceId}/self-check")
+    @ResponseBody
+    @SaCheckPermission("system:device:api:self-check")
+    @CheckOwner(resource = "device", id = "#deviceId")
+    @AuditLog(module = "设备管理", operation = "设备接入自检")
+    @Operation(summary = "设备接入自检", description = "逐项检查绑定、在线状态、OTA 地址、实时通道、鉴权与固件版本")
+    public ApiResponse<DeviceSelfCheckResp> selfCheck(@PathVariable String deviceId) {
+        return ApiResponse.success(toSelfCheckResp(deviceSelfCheckService.check(deviceId)));
+    }
+
+    private DeviceSelfCheckResp toSelfCheckResp(DeviceSelfCheckBO bo) {
+        DeviceSelfCheckResp resp = new DeviceSelfCheckResp();
+        resp.setDeviceId(bo.getDeviceId());
+        resp.setDeviceName(bo.getDeviceName());
+        resp.setSummary(bo.getSummary());
+        resp.setPassed(bo.getPassed());
+        resp.setWarned(bo.getWarned());
+        resp.setFailed(bo.getFailed());
+        resp.setCheckTime(bo.getCheckTime());
+        resp.setItems(bo.getItems().stream().map(this::toSelfCheckItemResp).toList());
+        return resp;
+    }
+
+    private SelfCheckItemResp toSelfCheckItemResp(SelfCheckItemBO bo) {
+        SelfCheckItemResp resp = new SelfCheckItemResp();
+        resp.setKey(bo.getKey());
+        resp.setName(bo.getName());
+        resp.setStatus(bo.getStatus());
+        resp.setDetail(bo.getDetail());
+        resp.setSuggestion(bo.getSuggestion());
+        return resp;
+    }
 
     /**
      * 设备查询

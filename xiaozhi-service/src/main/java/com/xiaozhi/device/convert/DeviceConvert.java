@@ -30,12 +30,16 @@ public interface DeviceConvert {
     @Mapping(target = "mcpList", ignore = true)
     @Mapping(target = "location", ignore = true)
     @Mapping(target = "updateTime", ignore = true)
+    @Mapping(target = "channel", ignore = true)
+    @Mapping(target = "channelOnline", ignore = true)
     DeviceResp toResp(VerifyCodeBO codeBO);
 
     @Mapping(target = "sessionId", ignore = true)
     @Mapping(target = "code", ignore = true)
     @Mapping(target = "audioPath", ignore = true)
     @Mapping(target = "mcpList", ignore = true)
+    @Mapping(target = "channel", ignore = true)
+    @Mapping(target = "channelOnline", ignore = true)
     DeviceResp toResp(DeviceProjection projection);
 
     /**
@@ -48,5 +52,7 @@ public interface DeviceConvert {
     @Mapping(target = "code", ignore = true)
     @Mapping(target = "audioPath", ignore = true)
     @Mapping(target = "mcpList", ignore = true)
+    @Mapping(target = "channel", ignore = true)
+    @Mapping(target = "channelOnline", ignore = true)
     DeviceResp toResp(Device device, String roleName);
 }

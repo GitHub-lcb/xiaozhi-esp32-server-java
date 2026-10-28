@@ -1,5 +1,92 @@
 # 变更日志
 
+## [6.2.0] - 未发布
+
+### 新功能
+
+- feat: **OTA 分批升级**。新增固件版本库（`sys_firmware`）、升级任务（`sys_firmware_release`）与升级记录
+  （`sys_firmware_upgrade_log`）。任务支持全量 / 按比例（按设备ID哈希分桶） / 白名单三种投放策略，
+  可设时间窗；设备 `POST /api/device/ota` 时按「任务进行中 + 时间窗内 + 芯片型号匹配 + 目标版本高于当前版本 +
+  命中策略」挑出最高版本下发，并记录一条升级记录。没有命中任何任务时行为与之前一致，老部署不受影响。
+- feat: 后台新增「固件升级」页面（`/firmware`），三个 Tab：固件版本、升级任务、升级记录；权限键 `system:firmware`。
+
+- feat: **设备接入一键自检**。新增 `GET /api/device/{deviceId}/self-check`，一次返回绑定、在线状态、设备信息完整度、
+  OTA 地址、实时通道、设备鉴权、固件可升级版本七项结论，每项带判定依据与修复建议；设备页操作列新增「接入自检」。
+- feat: **运维指标对接**。接入 Actuator + Micrometer Prometheus，暴露 `/actuator/health`、`/actuator/prometheus`；
+  新增 `xiaozhi.ota.check`、`xiaozhi.ota.upgrade.delivered` 与 `xiaozhi.dialogue.servers` 指标。
+  抓取请求带 `X-Ops-Token`（或 `Authorization: Bearer`）头即可免登录，令牌由 `XIAOZHI_OPS_TOKEN` 配置，
+  只放行 health 与 prometheus 两个只读端点，其余 actuator 端点仍要求登录。
+
+- feat: **MQTT 设备通道**。dialogue 作为 MQTT 客户端连接 broker，订阅设备主题后把上行消息交给与 WebSocket
+  相同的 `MessageHandler`，对话/打断/TTS 不需要为 MQTT 再实现一遍；音频按协议用 base64 放进 JSON。
+  新增 `sys_device_channel` 记录通道类型、在线状态与最近消息时间，巡检任务把超过 TTL 没消息的置为离线。
+  OTA 响应在 `xiaozhi.mqtt.enabled=true` 时下发 `mqtt` 块（endpoint / client_id / publish_topic / 账号密码），
+  设备可自行选择长连接通道。设备自检新增「MQTT 通道」一项。
+
+- feat: **主动消息推送**。新增 `sys_push_message` 与 `/api/push` 一组接口、`/push` 后台页面：可按设备或按用户
+  （展开其名下设备）选目标，发送时只投在线设备、离线跳过并计数。双进程下 server 拿不到 WebSocket 会话，
+  经 Redis 广播 `xiaozhi:device-push` 交给持有会话的 dialogue 实例，由 `Persona.speakNow` 直接合成播报，不过 LLM；
+  播报完成后设备回到 IDLE，会话不关闭。
+
+- feat: **语音提醒与闹钟**。新增 `sys_reminder` 与 `/api/reminder` 接口、`/reminder` 后台页面：支持一次性、每天、
+  工作日三种重复方式。server 每 30 秒扫描到点提醒，在线设备复用主动推送的 Redis 通道播报，离线跳过一次
+  （重复任务顺延到下一次、一次性任务记为「已错过」）；服务器停机跨过多次时，下一次时间会跳过已经过去的时刻，
+  不会补播一串旧提醒。
+
+- feat: **设备远程控制**。新增 `sys_device_command` 与 `POST /api/device/{deviceId}/command`，设备页操作列新增
+  「远程控制」（重启 / 设置音量 / 自定义工具调用）。动作翻译成设备 MCP 工具（默认 `self.reboot`、
+  `self.audio_speaker.set_volume`，可用 `xiaozhi.device-command.*` 覆盖），经 Redis 广播交给持有会话的
+  dialogue 执行真实调用并回填成功/失败与结果；设备离线时在下发前就拒绝，不会留下停在「已下发」的记录。
+
+- feat: **设备截图**。新增 `sys_device_screenshot` 与 `POST /api/device/{deviceId}/screenshot`，设备页操作列新增
+  「截图」并在弹窗里预览回传图片。截图复用远程控制通道调用设备截图工具（默认 `self.screen.snapshot`，
+  可用 `xiaozhi.device-command.screenshot-tool` 覆盖）；回传的 http 地址或 data URI 由 dialogue 回填到记录，
+  纯 base64 不落库（体积不可控），按失败处理并提示改用 URL 回传。
+
+- feat: **知识库（RAG）后端**。新增 `sys_knowledge_base` / `sys_knowledge_doc` / `sys_knowledge_chunk` 与
+  `/api/knowledge*` 接口：文档上传后经 Tika 解析（PDF/Office/HTML/纯文本）、按 500 字 + 50 重叠切片、
+  用 EmbeddingModel 向量化入库，检索走余弦相似度取 topK，并提供 `/api/knowledge/search` 做召回测试。
+  向量模型取知识库的 `embeddingConfigId`，未配置时回退 `xiaozhi.knowledge.embedding-config-id`。
+- feat: **知识库接入对话与后台页面**。角色绑定的知识库会在每轮对话前检索 topK（默认 4 条、单条截断 400 字），
+  作为系统消息插在角色提示词之后注入；检索失败或没有命中时按无知识库继续回答，不影响对话主链路。
+  新增 `/knowledge` 后台页面：知识库增删改、文档上传（拖拽即索引）、文档状态与分片数、检索测试面板。
+
+- feat: **声纹识别**。新增 `sys_voiceprint` 与 `/api/voiceprint`（列表 / 注册 / 删除 / 识别测试），后台
+  `/voiceprint` 页面可上传单人录音注册家庭成员、再用一段录音测试能认出谁。向量提取走 sherpa-onnx
+  `SpeakerEmbeddingExtractor`（模型路径 `xiaozhi.voiceprint.model-path`，默认 `models/speaker/speaker.onnx`），
+  比对用余弦相似度、阈值 `xiaozhi.voiceprint.threshold`（默认 0.62）——宁可认不出也不认错人。
+  模型不在时接口明确报「模型未就绪」，不会静默返回空向量。
+
+- feat: **监控面板（活跃度 / 消息量）**。新增 `/api/stats/overview`、`/api/stats/messages/daily`、
+  `/api/stats/devices/top`，Dashboard 增加概览卡片（设备总数、在线设备、今日消息、近 7 天消息）与 7 日消息柱状图。
+  聚合查询走只读的 `StatsMapper`（COUNT / GROUP BY），趋势按天补齐 0、天数夹在 1-90，避免前端传大数拖死查询。
+
+- feat: **长期记忆（人工维护）**。新增 `sys_memory_fact` 与 `/api/memory-fact`、`/memory-fact` 页面：可以按成员
+  （或全家人）录入"应该记住的事"。每轮对话按「说话人 + 全家」两层取最近 8 条注入提示词，声纹认出了妈妈就只给
+  妈妈的记忆，避免把别人的偏好套到当前说话人身上；注入文本带"与用户当前说法冲突时以用户为准"的约束。
+  会话结束时可按开关自动提炼（`xiaozhi.memory.auto-extract-enabled`，默认关闭；用户发言少于 3 条不触发），
+  管理端可用 `source` 区分人工与自动，也可手动触发「从最近对话提炼」。
+
+- feat: **记忆图谱**。新增 `sys_memory_entity` / `sys_memory_relation` 与 `/api/memory-graph`、`/memory-graph` 页面。
+  事实落库时用关系词表抽取「谁 关系 什么」三元组（`妈妈喜欢乌龙茶` → 妈妈/喜欢/乌龙茶），人工录入与自动抽取两条路径
+  都会触发，抽不出来就跳过、不影响事实本身；关系以「妈妈 喜欢 乌龙茶」的形式随长期记忆一起注入对话（最多 10 条）。
+
+- feat: **对话指标（Token / 时延）**。新增 `sys_dialogue_metric`，每轮对话落一条（prompt/completion/total tokens 与
+  本轮耗时），`GET /api/stats/dialogue` 返回轮次、token 合计与平均时延；Dashboard 增加「对话轮次 / Token 消耗 /
+  平均响应时延 / 活跃设备 Top3」四项，监控面板至此覆盖活跃度、消息量、Token 与时延四个维度。
+
+- feat: **海量工具调度**。新增 `ToolSelector`：工具总数超过 `xiaozhi.tools.max-count`（默认 12）时，
+  按本轮用户问题与工具名/描述的字符重合度粗排，只把最相关的一批交给模型；工具数不超过阈值时原样下发，
+  不改变现有行为。纯本地计算，不依赖 embedding，也不额外消耗 token。
+
+### 升级注意
+
+- 已建好的库执行 `db/upgrade/2026-10-28__firmware.sql` 补表与权限（含 `sys_knowledge_*`、`sys_device_screenshot`、`sys_device_command`、`sys_device_channel`、`sys_push_message`、`sys_reminder` 与对应权限）；新装环境直接执行 `db/init.sql`。
+- 要用 MQTT 通道需配 `XIAOZHI_MQTT_*` 一组环境变量（`XIAOZHI_MQTT_ENABLED=true` 才启用），并让固件重新走一次 OTA 拿到 mqtt 配置。
+- 要用 Prometheus 抓指标，需配置 `XIAOZHI_OPS_TOKEN`，并在抓取配置里带同名请求头。
+
+---
+
 ## [6.1.0] - 2026-09-19
 
 ### 💥 升级注意
