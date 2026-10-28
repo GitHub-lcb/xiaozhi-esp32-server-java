@@ -39,6 +39,8 @@ services:
       TZ: ${TZ:-Asia/Shanghai}
     volumes:
       - mysql_data:/var/lib/mysql  # 持久化数据
+      # 项目已不再使用 Flyway，建表靠这个脚本；只在数据目录为空时执行
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h localhost -u $$MYSQL_USER -p$$MYSQL_PASSWORD"]
       interval: 10s
@@ -155,7 +157,8 @@ services:
     ports:
       - "${WEB_PORT:-8084}:8084"
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O- http://localhost:8084/ >/dev/null 2>&1 || exit 1"]
+      # 不能写 localhost：容器内会先解析到 ::1，而 nginx 只监听 IPv4，健康检查会一直失败
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8084/ >/dev/null 2>&1 || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5

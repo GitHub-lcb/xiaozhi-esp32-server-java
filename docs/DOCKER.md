@@ -2,13 +2,18 @@
 
 前置条件：装好 Docker（`docker compose version` 能输出版本）。不需要 clone 仓库。
 
+> 国内云服务器、访问不了 GitHub、或只有 80/443 对外开放的场景，见[云服务器部署](./DOCKER_DEPLOY.md)。
+
 ## 1. 启动
 
 ```bash
-mkdir xiaozhi && cd xiaozhi
+mkdir -p xiaozhi && cd xiaozhi
 curl -O https://raw.githubusercontent.com/joey-zhou/xiaozhi-esp32-server-java/main/docker-compose.yml
+mkdir -p db && curl -o db/init.sql https://raw.githubusercontent.com/joey-zhou/xiaozhi-esp32-server-java/main/db/init.sql
 docker compose up -d
 ```
+
+> `db/init.sql` 必须下载：项目不使用 Flyway，建表与基础数据全靠它，compose 会把它挂进 MySQL 的初始化目录。
 
 起 5 个容器：MySQL、Redis、server、dialogue、web。库、表与基础数据由 `db/init.sql` 随 MySQL 容器首次启动一次性建好，不用手动导入。
 
