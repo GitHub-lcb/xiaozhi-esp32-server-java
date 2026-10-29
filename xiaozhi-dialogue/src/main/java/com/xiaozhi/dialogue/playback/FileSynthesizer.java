@@ -69,7 +69,13 @@ public class FileSynthesizer extends Synthesizer {
                                 com.xiaozhi.ai.tts.FileBackedStreamingAdapter.wrapIfNeeded(ttsService);
                         boolean first = true;
                         boolean any = false;
+                        long startNs = System.nanoTime();
                         for (byte[] chunk : streaming.synthesizeStream(text).toIterable()) {
+                            if (first) {
+                                // 首块延迟是流式改造的核心指标：真流式应明显小于整句合成耗时
+                                io.micrometer.core.instrument.Metrics.timer("xiaozhi.tts.first-chunk")
+                                        .record(System.nanoTime() - startNs, java.util.concurrent.TimeUnit.NANOSECONDS);
+                            }
                             any = true;
                             sink.next(first ? new Speech(chunk, text).withMood(mood) : new Speech(chunk));
                             first = false;
