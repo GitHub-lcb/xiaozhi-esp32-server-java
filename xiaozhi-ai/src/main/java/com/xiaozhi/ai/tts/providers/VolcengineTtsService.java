@@ -173,11 +173,18 @@ public class VolcengineTtsService implements StreamingTtsService {
         if (text == null || text.isEmpty()) {
             return Flux.empty();
         }
+        return Flux.<byte[]>defer(() -> synthesizeOnce(text))
+                .retryWhen(reactor.util.retry.Retry.backoff(MAX_RETRY_ATTEMPTS - 1L, java.time.Duration.ofMillis(RETRY_DELAY_MS))
+                        .filter(e -> e instanceof IllegalStateException));
+    }
+
+    /** 一次流式合成的实现，失败向上抛由外层重试 */
+    private Flux<byte[]> synthesizeOnce(String text) {
         return Flux.<byte[]>create(sink -> {
             try (Response response = client.newCall(buildRequest(text)).execute()) {
                 if (!response.isSuccessful() || response.body() == null) {
                     String errorBody = response.body() != null ? response.body().string() : "无响应体";
-                    sink.error(new IllegalStateException("TTS请求失败: " + response.code() + " " + errorBody));
+                    sink.error(new IllegalStateException("TTS请求失败 voice=" + getVoiceName() + " code=" + response.code() + " " + errorBody));
                     return;
                 }
                 BufferedSource source = response.body().source();
