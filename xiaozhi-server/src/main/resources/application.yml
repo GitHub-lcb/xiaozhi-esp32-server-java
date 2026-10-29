@@ -37,6 +37,17 @@ spring:
   profiles:
     active: dev
 
+  # MCP Server（SSE 接入点）：客户端 POST /mcp/sse 建会话，后续消息走 /mcp/message
+  # 注意：同一份 yml 里 spring: 只能出现一次，这里必须并入上面的 spring 块，不能另起一个
+  ai:
+    mcp:
+      server:
+        name: xiaozhi-esp32-server-java
+        version: 6.2.0
+        type: SYNC
+        sse-message-endpoint: /mcp/message
+        sse-endpoint: /mcp/sse
+
 # ============================================================
 # 邮件（注册与找回密码的验证码）
 # 未配置时不发信，接口返回发送失败
@@ -83,20 +94,6 @@ xiaozhi:
 # 运维指标：Prometheus 抓取 /actuator/prometheus
 # 抓取请求带不了登录态，需要配 XIAOZHI_OPS_TOKEN 并在抓取配置里带 X-Ops-Token 头
 # ============================================================
-# ============================================================
-# MCP Server（SSE 接入点）
-# 客户端连接：POST /mcp/sse 建立会话，后续消息走 /mcp/message
-# ============================================================
-spring:
-  ai:
-    mcp:
-      server:
-        name: xiaozhi-esp32-server-java
-        version: 6.2.0
-        type: SYNC
-        sse-message-endpoint: /mcp/message
-        sse-endpoint: /mcp/sse
-
 management:
   endpoints:
     web:
