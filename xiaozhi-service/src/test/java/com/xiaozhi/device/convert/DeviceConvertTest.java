@@ -34,12 +34,15 @@ class DeviceConvertTest {
         DeviceResp resp = convert.toResp(projection);
 
         assertThat(resp).usingRecursiveComparison()
-            .ignoringFields("sessionId", "code", "audioPath", "mcpList")
+            .ignoringFields("sessionId", "code", "audioPath", "mcpList", "channel", "channelOnline")
             .isEqualTo(projection);
         assertThat(resp.getSessionId()).isNull();
         assertThat(resp.getCode()).isNull();
         assertThat(resp.getAudioPath()).isNull();
         assertThat(resp.getMcpList()).isNull();
+        // 接入通道由 DeviceAppService 批量回填，不来自投影
+        assertThat(resp.getChannel()).isNull();
+        assertThat(resp.getChannelOnline()).isNull();
     }
 
     @Test

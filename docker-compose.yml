@@ -76,7 +76,7 @@ services:
           memory: 128M
 
   server:
-    image: ${XIAOZHI_IMAGE_SERVER:-ghcr.io/joey-zhou/xiaozhi-server}:${XIAOZHI_TAG:-latest}
+    image: ${XIAOZHI_IMAGE_SERVER:-ghcr.io/github-lcb/xiaozhi-server}:${XIAOZHI_TAG:-latest}
     container_name: xiaozhi-server
     restart: always
     depends_on:
@@ -111,7 +111,7 @@ services:
           memory: 512M
 
   dialogue:
-    image: ${XIAOZHI_IMAGE_DIALOGUE:-ghcr.io/joey-zhou/xiaozhi-dialogue}:${XIAOZHI_TAG:-latest}
+    image: ${XIAOZHI_IMAGE_DIALOGUE:-ghcr.io/github-lcb/xiaozhi-dialogue}:${XIAOZHI_TAG:-latest}
     container_name: xiaozhi-dialogue
     restart: always
     depends_on:
@@ -148,7 +148,7 @@ services:
           memory: 512M
 
   web:
-    image: ${XIAOZHI_IMAGE_WEB:-ghcr.io/joey-zhou/xiaozhi-web}:${XIAOZHI_TAG:-latest}
+    image: ${XIAOZHI_IMAGE_WEB:-ghcr.io/github-lcb/xiaozhi-web}:${XIAOZHI_TAG:-latest}
     container_name: xiaozhi-web
     restart: always
     depends_on:

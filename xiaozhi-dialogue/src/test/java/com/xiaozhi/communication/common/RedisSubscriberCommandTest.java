@@ -36,6 +36,9 @@ class RedisSubscriberCommandTest {
         subscriber = new RedisSubscriber();
         ReflectionTestUtils.setField(subscriber, "deviceMcpService", deviceMcpService);
         ReflectionTestUtils.setField(subscriber, "deviceCommandService", deviceCommandService);
+        // 指令处理顺带回填截图记录，这里给空实现即可
+        ReflectionTestUtils.setField(subscriber, "deviceScreenshotService",
+            mock(com.xiaozhi.screenshot.service.DeviceScreenshotService.class));
     }
 
     @Test

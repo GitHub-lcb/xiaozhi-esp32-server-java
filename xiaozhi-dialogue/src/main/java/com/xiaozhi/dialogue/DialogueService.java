@@ -82,6 +82,10 @@ public class DialogueService{
     @Resource
     private com.xiaozhi.ai.coordination.WakeCoordinator wakeCoordinator;
 
+    /** 多设备就近应答开关，默认关闭；配好设备分组后再打开 */
+    @org.springframework.beans.factory.annotation.Value("${xiaozhi.dialogue.wake-coordination-enabled:false}")
+    private boolean wakeCoordinationEnabled;
+
     @Resource
     private MessageSender messageService;
 
@@ -615,7 +619,8 @@ public class DialogueService{
      */
     private boolean shouldAnswerWake(ChatSession session, String text) {
         try {
-            if (deviceGroupService == null || wakeCoordinator == null) {
+            // 默认关闭：多设备协同需要先配好分组，没分组时开启反而会引入一次无谓的 Redis 往返
+            if (!wakeCoordinationEnabled || deviceGroupService == null || wakeCoordinator == null) {
                 return true;
             }
             String deviceId = session.getDevice() == null ? null : session.getDevice().getDeviceId();

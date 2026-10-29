@@ -178,7 +178,11 @@ class ProtocolTestHarness {
                 "addresseeClassifier", addresseeClassifier,
                 "goodbyeMessages", goodbyeMessages,
                 "eventPublisher", eventBus.publisher(),
-                "storageServiceFactory", storageServiceFactory);
+                "storageServiceFactory", storageServiceFactory,
+                // 说话人识别 / 多设备协同：协议用例不关心其内部逻辑，给空实现即可
+                "speakerIdentifier", org.mockito.Mockito.mock(com.xiaozhi.ai.voiceprint.SpeakerIdentifier.class),
+                "deviceGroupService", org.mockito.Mockito.mock(com.xiaozhi.devicegroup.service.DeviceGroupService.class),
+                "wakeCoordinator", org.mockito.Mockito.mock(com.xiaozhi.ai.coordination.WakeCoordinator.class));
 
         inject(messageHandler,
                 "deviceService", deviceService,
