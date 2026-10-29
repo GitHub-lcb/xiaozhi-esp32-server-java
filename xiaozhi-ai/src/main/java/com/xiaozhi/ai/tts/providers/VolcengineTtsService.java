@@ -2,7 +2,7 @@ package com.xiaozhi.ai.tts.providers;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.xiaozhi.ai.tts.TtsService;
+import com.xiaozhi.ai.tts.StreamingTtsService;
 import com.xiaozhi.ai.tts.XiaozhiTtsOptions;
 import com.xiaozhi.common.model.bo.ConfigBO;
 import com.xiaozhi.utils.AudioUtils;
@@ -10,6 +10,8 @@ import com.xiaozhi.ai.utils.HttpUtil;
 
 import okhttp3.*;
 import okio.BufferedSource;
+import reactor.core.publisher.Flux;
+import reactor.core.scheduler.Schedulers;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.file.Path;
@@ -18,7 +20,7 @@ import java.util.*;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class VolcengineTtsService implements TtsService {
+public class VolcengineTtsService implements StreamingTtsService {
     private static final String PROVIDER_NAME = "volcengine";
     /** 单向流式合成接口（HTTP Chunked 分块返回），用于非流式的一次性合成 */
     private static final String API_URL = "https://openspeech.bytedance.com/api/v3/tts/unidirectional";
@@ -160,87 +162,127 @@ public class VolcengineTtsService implements TtsService {
         throw new Exception("语音合成失败");
     }
 
-    /**
-     * 调用单向流式合成接口获取语音合成结果。
+        /**
+     * 流式合成：同一次 HTTP 请求，但把服务端逐块返回的 PCM 直接吐给调用方。
      * <p>
-     * 该接口基于 HTTP Chunked 协议，响应是逐块返回的 JSON（每块携带一段 base64 音频），
-     * 必须按块累加拼接，否则只能拿到第一片音频导致语音被截断。
+     * v3 unidirectional 的响应本身就是 HTTP Chunked 逐块 JSON（每块带一段 base64 音频），
+     * 以前是全攒进内存最后落文件，首包要等整句合成完；这里改成解析一块吐一块。
      */
-    private boolean sendRequest(String text, String audioFilePath) throws Exception {
-        try {
-            JsonObject reqParams = new JsonObject();
-            reqParams.addProperty("text", text);
-            reqParams.addProperty("speaker", getVoiceName());
-            reqParams.add("audio_params", buildAudioParams());
-            appendPostProcess(reqParams);
-
-            JsonObject requestJson = new JsonObject();
-            requestJson.add("req_params", reqParams);
-
-            RequestBody requestBody = RequestBody.create(JSON, requestJson.toString());
-            Request request = new Request.Builder()
-                    .url(API_URL)
-                    .addHeader("Content-Type", "application/json")
-                    .addHeader("X-Api-Key", accessToken)
-                    .addHeader("X-Api-Resource-Id", resolveResourceId())
-                    .addHeader("X-Api-Request-Id", UUID.randomUUID().toString())
-                    .post(requestBody)
-                    .build();
-
-            try (Response response = client.newCall(request).execute()) {
-                if (!response.isSuccessful()) {
+    @Override
+    public Flux<byte[]> synthesizeStream(String text) {
+        if (text == null || text.isEmpty()) {
+            return Flux.empty();
+        }
+        return Flux.<byte[]>create(sink -> {
+            try (Response response = client.newCall(buildRequest(text)).execute()) {
+                if (!response.isSuccessful() || response.body() == null) {
                     String errorBody = response.body() != null ? response.body().string() : "无响应体";
-                    log.error("TTS请求失败: {} {}, 错误信息: {}, 原始内容: {}", response.code(), response.message(), errorBody, text);
-                    return false;
+                    sink.error(new IllegalStateException("TTS请求失败: " + response.code() + " " + errorBody));
+                    return;
                 }
-                if (response.body() == null) {
-                    log.error("TTS响应体为空");
-                    return false;
-                }
-
-                ByteArrayOutputStream pcmBuffer = new ByteArrayOutputStream();
                 BufferedSource source = response.body().source();
+                boolean any = false;
                 String line;
                 while ((line = source.readUtf8Line()) != null) {
-                    if (line.isBlank()) {
-                        continue;
+                    ParsedChunk chunk = parseChunk(line);
+                    if (chunk.error() != null) {
+                        sink.error(new IllegalStateException(chunk.error()));
+                        return;
                     }
-                    JsonObject chunk;
-                    try {
-                        chunk = JsonParser.parseString(line).getAsJsonObject();
-                    } catch (Exception e) {
-                        log.warn("跳过无法解析的响应分块: {}", line);
-                        continue;
-                    }
-                    // 合成结束时服务端会回一个成功码分块（20000000 OK），不是错误
-                    if (chunk.has("code")) {
-                        int chunkCode = chunk.get("code").getAsInt();
-                        if (chunkCode != 0 && chunkCode != CODE_SUCCESS) {
-                            log.error("TTS请求返回错误: code={}, message={}", chunkCode,
-                                    chunk.has("message") ? chunk.get("message").getAsString() : "");
-                            return false;
-                        }
-                    }
-                    if (chunk.has("data") && !chunk.get("data").isJsonNull()) {
-                        String base64Audio = chunk.get("data").getAsString();
-                        if (!base64Audio.isEmpty()) {
-                            pcmBuffer.write(Base64.getDecoder().decode(base64Audio));
-                        }
+                    if (chunk.audio() != null) {
+                        any = true;
+                        sink.next(chunk.audio());
                     }
                 }
-
-                if (pcmBuffer.size() == 0) {
-                    log.error("TTS响应中未找到音频数据，原始内容: {}", text);
-                    return false;
+                if (!any) {
+                    sink.error(new IllegalStateException("TTS响应中未找到音频数据"));
+                    return;
                 }
-
-                // 接口返回裸 PCM，补上 WAV 头后落盘（采样率与声道数同 AudioUtils 约定）
-                AudioUtils.saveAsWav(Path.of(audioFilePath), pcmBuffer.toByteArray());
-                return true;
+                sink.complete();
+            } catch (Exception e) {
+                sink.error(new IllegalStateException("发送TTS请求失败: " + e.getMessage(), e));
             }
-        } catch (Exception e) {
-            log.error("发送TTS请求时发生错误", e);
-            throw new Exception("发送TTS请求失败", e);
+        }).subscribeOn(Schedulers.boundedElastic());
+    }
+
+    /** 真流式：v3 unidirectional 本身就是边合成边返回 */
+    @Override
+    public boolean nativeStreaming() {
+        return true;
+    }
+
+    /** 组装 v3 合成请求 */
+    private Request buildRequest(String text) {
+        JsonObject reqParams = new JsonObject();
+        reqParams.addProperty("text", text);
+        reqParams.addProperty("speaker", getVoiceName());
+        reqParams.add("audio_params", buildAudioParams());
+        appendPostProcess(reqParams);
+
+        JsonObject requestJson = new JsonObject();
+        requestJson.add("req_params", reqParams);
+
+        RequestBody requestBody = RequestBody.create(JSON, requestJson.toString());
+        return new Request.Builder()
+                .url(API_URL)
+                .addHeader("Content-Type", "application/json")
+                .addHeader("X-Api-Key", accessToken)
+                .addHeader("X-Api-Resource-Id", resolveResourceId())
+                .addHeader("X-Api-Request-Id", UUID.randomUUID().toString())
+                .post(requestBody)
+                .build();
+    }
+
+    /** 一个响应分块的解析结果：要么带音频，要么带错误，要么两者皆空（正常跳过） */
+    record ParsedChunk(byte[] audio, String error) {
+    }
+
+    /**
+     * 解析 v3 的单行响应分块。空行/无法解析的行直接跳过，
+     * 非 0 且非成功码的 code 视为致命错误，交给上层终止本句合成。
+     */
+    static ParsedChunk parseChunk(String line) {
+        if (line == null || line.isBlank()) {
+            return new ParsedChunk(null, null);
         }
+        JsonObject chunk;
+        try {
+            chunk = JsonParser.parseString(line).getAsJsonObject();
+        } catch (Exception e) {
+            return new ParsedChunk(null, null);
+        }
+        if (chunk.has("code")) {
+            int code = chunk.get("code").getAsInt();
+            if (code != 0 && code != CODE_SUCCESS) {
+                String message = chunk.has("message") ? chunk.get("message").getAsString() : "";
+                return new ParsedChunk(null, "TTS返回错误: code=" + code + ", message=" + message);
+            }
+        }
+        if (chunk.has("data") && !chunk.get("data").isJsonNull()) {
+            String base64Audio = chunk.get("data").getAsString();
+            if (!base64Audio.isEmpty()) {
+                return new ParsedChunk(Base64.getDecoder().decode(base64Audio), null);
+            }
+        }
+        return new ParsedChunk(null, null);
+    }
+
+    /**
+     * 落盘版：消费同一个流式入口，攒齐后补 WAV 头。
+     * 录音缓存、测试音等需要文件路径的调用方走这里，行为与改造前一致。
+     */
+    private boolean sendRequest(String text, String audioFilePath) throws Exception {
+        ByteArrayOutputStream pcmBuffer = new ByteArrayOutputStream();
+        boolean any = false;
+        for (byte[] chunk : synthesizeStream(text).toIterable()) {
+            any = true;
+            pcmBuffer.write(chunk);
+        }
+        if (!any) {
+            log.error("TTS响应中未找到音频数据，原始内容: {}", text);
+            return false;
+        }
+        AudioUtils.saveAsWav(Path.of(audioFilePath), pcmBuffer.toByteArray());
+        return true;
     }
 }
