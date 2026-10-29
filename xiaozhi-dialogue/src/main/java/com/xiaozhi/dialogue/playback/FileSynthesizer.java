@@ -63,23 +63,28 @@ public class FileSynthesizer extends Synthesizer {
                 String mood = result.mood();
                 Flux<Speech> lazyTtsFlux = Flux.create(sink -> {
                     try {
-                        Path audioPath = ttsService.textToSpeech(text);
-                        if (audioPath != null) {
-                            // 分块读取PCM，避免全量加载进内存
-                            List<byte[]> chunks = AudioUtils.readAsPcmChunks(audioPath.toString());
-                            boolean first = true;
-                            for (byte[] chunk : chunks) {
-                                sink.next(first ? new Speech(chunk, text).withMood(mood) : new Speech(chunk));
-                                first = false;
-                            }
-                        } else {
-                            log.error("TTS服务返回空音频文件 - SessionId: {}", chatSession.getSessionId());
+                        // 统一走流式入口：真流式 provider 边合成边吐，其它 provider 由适配器
+                        // 包装成「先落文件再分块」，分块方式与旧路径完全一致
+                        com.xiaozhi.ai.tts.StreamingTtsService streaming =
+                                com.xiaozhi.ai.tts.FileBackedStreamingAdapter.wrapIfNeeded(ttsService);
+                        boolean first = true;
+                        boolean any = false;
+                        for (byte[] chunk : streaming.synthesizeStream(text).toIterable()) {
+                            any = true;
+                            sink.next(first ? new Speech(chunk, text).withMood(mood) : new Speech(chunk));
+                            first = false;
                         }
-                    } catch (TtsOverloadException e) {
-                        // 本地合成已达并发上限，跳过本句，后续句子照常合成
-                        log.warn("本地TTS过载丢句: {} - SessionId: {}", e.getMessage(), chatSession.getSessionId());
+                        if (!any) {
+                            log.error("TTS服务返回空音频 - SessionId: {}", chatSession.getSessionId());
+                        }
                     } catch (Exception e) {
-                        log.error("TTS合成出错: {} - SessionId: {}", e.getMessage(), chatSession.getSessionId());
+                        // 流式入口把 provider 的受检异常包成 RuntimeException 上抛，
+                        // 这里按类型区分：过载丢句只是跳过本句，其它错误照常记日志
+                        if (e instanceof TtsOverloadException) {
+                            log.warn("本地TTS过载丢句: {} - SessionId: {}", e.getMessage(), chatSession.getSessionId());
+                        } else {
+                            log.error("TTS合成出错: {} - SessionId: {}", e.getMessage(), chatSession.getSessionId());
+                        }
                     }
                     sink.complete();
                 });
