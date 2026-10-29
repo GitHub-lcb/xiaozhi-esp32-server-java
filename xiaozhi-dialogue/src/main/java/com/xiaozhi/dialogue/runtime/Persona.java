@@ -320,6 +320,10 @@ public class Persona {
             }
             long elapsed = DateUtils.instant().toEpochMilli() - turn.startedAt.toEpochMilli();
             metric.setLatencyMs(Math.max(0, elapsed));
+            if (currentSession != null) {
+                metric.setTtsFirstChunkMs(currentSession.getTtsFirstChunkMs());
+                currentSession.setTtsFirstChunkMs(null);
+            }
             dialogueMetricService.record(metric);
         } catch (RuntimeException e) {
             log.debug("记录对话指标失败，忽略", e);

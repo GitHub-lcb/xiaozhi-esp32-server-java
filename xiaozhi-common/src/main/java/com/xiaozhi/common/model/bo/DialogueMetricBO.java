@@ -16,5 +16,8 @@ public class DialogueMetricBO {
     private Integer completionTokens;
     private Integer totalTokens;
     private Long latencyMs;
+
+    /** TTS 首块音频耗时（毫秒），未流式或未合成时为 null */
+    private Long ttsFirstChunkMs;
     private LocalDateTime createTime;
 }

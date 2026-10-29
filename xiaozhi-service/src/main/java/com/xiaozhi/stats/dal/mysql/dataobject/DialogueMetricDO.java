@@ -22,4 +22,7 @@ public class DialogueMetricDO extends BaseDO {
     private Integer completionTokens;
     private Integer totalTokens;
     private Long latencyMs;
+
+    /** TTS 首块音频耗时（毫秒） */
+    private Long ttsFirstChunkMs;
 }

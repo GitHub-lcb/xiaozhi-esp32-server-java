@@ -72,9 +72,10 @@ public class FileSynthesizer extends Synthesizer {
                         long startNs = System.nanoTime();
                         for (byte[] chunk : streaming.synthesizeStream(text).toIterable()) {
                             if (first) {
-                                // 首块延迟是流式改造的核心指标：真流式应明显小于整句合成耗时
-                                io.micrometer.core.instrument.Metrics.timer("xiaozhi.tts.first-chunk")
-                                        .record(System.nanoTime() - startNs, java.util.concurrent.TimeUnit.NANOSECONDS);
+                                // 首块延迟是流式改造的核心指标：真流式应明显小于整句合成耗时。
+                                // 同时写进会话，随本轮指标落库（Prometheus 端点只在 server 进程，看不到这里）
+                                long firstChunkMs = (System.nanoTime() - startNs) / 1_000_000L;
+                                chatSession.setTtsFirstChunkMs(firstChunkMs);
                             }
                             any = true;
                             sink.next(first ? new Speech(chunk, text).withMood(mood) : new Speech(chunk));

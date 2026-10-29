@@ -147,8 +147,19 @@ public abstract class ChatSession {
     /** 本次说话的识别过程，说得久时由多段 STT 流组成，起新一轮时整体换掉 */
     private volatile SpeechTurn speechTurn;
 
+    public Long getTtsFirstChunkMs() {
+        return ttsFirstChunkMs;
+    }
+
+    public void setTtsFirstChunkMs(Long ttsFirstChunkMs) {
+        this.ttsFirstChunkMs = ttsFirstChunkMs;
+    }
+
     // ========== 超时断连标记 ==========
     private volatile boolean timeoutDisconnect;
+
+    /** 本轮 TTS 首块音频耗时（毫秒），由合成器写入、指标落库后清空 */
+    private volatile Long ttsFirstChunkMs;
 
     // --------------------设备mcp-------------------------
     private DeviceMcpHolder deviceMcpHolder = new DeviceMcpHolder();
