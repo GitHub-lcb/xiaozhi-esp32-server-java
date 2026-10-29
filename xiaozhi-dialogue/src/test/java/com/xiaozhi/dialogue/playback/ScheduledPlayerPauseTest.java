@@ -44,7 +44,9 @@ import static org.mockito.Mockito.verify;
  */
 class ScheduledPlayerPauseTest {
 
-    private static final long AWAIT_TIMEOUT_MS = 5000;
+    // 整机跑全量用例时虚拟线程调度会被抢占，5 秒容易抖成假失败；这里给足 15 秒，
+    // 真实回归（帧一直不来）仍旧会失败，只是不再受机器负载影响
+    private static final long AWAIT_TIMEOUT_MS = 15_000;
 
     /** 与 ScheduledPlayer.SENTENCE_GAP_FRAMES 一致：句间要补的静音帧数 */
     private static final int SENTENCE_GAP_FRAMES = 4;
