@@ -52,6 +52,9 @@ public class DeviceCommandAppService {
     private DeviceChannelService deviceChannelService;
 
     @Resource
+    private com.xiaozhi.device.service.DeviceService deviceService;
+
+    @Resource
     private RedisBroadcast redisBroadcast;
 
     public PageResult<DeviceCommandResp> page(DeviceCommandPageReq req) {
@@ -60,11 +63,26 @@ public class DeviceCommandAppService {
     }
 
     /**
-     * 下发一条控制指令：先判通道在线（离线直接拒绝，避免记录停在「已下发」），再落库并广播。
+     * 设备是否可下发指令。
+     * <p>
+     * 两条链路都要认：MQTT 设备在 sys_device_channel 里登记在线状态，
+     * 而 WebSocket 设备根本不写这张表，只把状态同步到 sys_device.state。
+     * 早先只查 channel，导致 WS 在线设备被一律判成离线。
+     */
+    private boolean isOnline(String deviceId) {
+        DeviceChannelBO channel = deviceChannelService.get(deviceId);
+        if (channel != null && channel.isOnline()) {
+            return true;
+        }
+        var device = deviceService.getBO(deviceId);
+        return device != null && "1".equals(device.getState());
+    }
+
+    /**
+     * 下发一条控制指令：先判在线（离线直接拒绝，避免记录停在「已下发」），再落库并广播。
      */
     public DeviceCommandResp send(String deviceId, DeviceCommandReq req, Integer userId) {
-        DeviceChannelBO channel = deviceChannelService.get(deviceId);
-        if (channel == null || !channel.isOnline()) {
+        if (!isOnline(deviceId)) {
             throw new OperationFailedException("设备不在线，无法下发控制指令");
         }
         String toolName;
