@@ -33,6 +33,7 @@ import java.util.Optional;
  * resetDefault 不按 state 过滤，被禁用的角色仍占着该用户的默认位。
  */
 @Repository
+@lombok.extern.slf4j.Slf4j
 public class RoleRepositoryImpl implements RoleRepository {
 
     @Resource
@@ -76,7 +77,11 @@ public class RoleRepositoryImpl implements RoleRepository {
 
         var signals = role.pullSignals();
         if (signals.contains(Role.DomainSignal.UPDATED)) {
+            // 换音色后是否生效，全靠这条广播：日志里必须能对上「保存了什么音色 → 发了哪次广播」
+            log.info("角色保存 roleId={} 触发更新广播（信号={}）", role.getRoleId(), signals);
             eventPublisher.publishEvent(new RoleUpdatedEvent(this, role.getRoleId()));
+        } else {
+            log.warn("角色保存 roleId={} 未产生 UPDATED 信号，不会广播，对话侧不会重建 Persona", role.getRoleId());
         }
     }
 

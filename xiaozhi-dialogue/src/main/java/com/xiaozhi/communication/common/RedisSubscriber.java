@@ -220,6 +220,8 @@ public class RedisSubscriber {
                     vadService.refreshRoleThresholds(session.getSessionId());
                 }
             }
+            log.info("收到 roleUpdated 广播 roleId={} personaCleanup={} 在线会话={}", roleId, count,
+                    sessionManager.getAllSessions().size());
             if (count > 0) {
                 log.info("角色属性变更，已清理 {} 个 Persona（roleId: {}）", count, roleId);
             }
