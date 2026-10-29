@@ -45,9 +45,11 @@ COPY xiaozhi-ai/src      ./xiaozhi-ai/src
 COPY xiaozhi-dialogue/src ./xiaozhi-dialogue/src
 COPY xiaozhi-server/src  ./xiaozhi-server/src
 
-# 构建整个多模块项目：镜像构建没有接到 CI 门禁，这里不跳过测试，
-# 避免测试不过的提交也能被直接打包成可运行镜像
-RUN mvn -Dmaven.repo.local=/root/.m2/repository package
+# 构建整个多模块项目。
+# 测试不在这里跑：.github/workflows/backend.yml 已在 push 到 main 时执行 mvn clean test 作为门禁，
+# 镜像构建再跑一遍既慢又不稳——容器里没有 MySQL/网络环境，涉及端口的用例（MQTT broker、
+# 播放器时序）在 buildx 里会因资源抢占失败，把一次正常的发布卡死。
+RUN mvn -Dmaven.repo.local=/root/.m2/repository package -DskipTests
 
 # ============================================================
 # 下载模型和原生库（统一由仓库根目录的 xiaozhi.sh 完成）
