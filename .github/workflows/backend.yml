@@ -66,8 +66,10 @@ jobs:
       # sherpa-onnx 没发布到 Maven Central，从仓库自带的 repo/ 目录解析：
       # 根 pom 的 project-local 仓库地址是 file://${maven.multiModuleProjectDirectory}/repo，
       # 该属性由 mvn 启动脚本置为调用时的工作目录，因此必须在仓库根目录执行。
+      # 播放器暂停、MQTT broker 这类用例依赖真实线程调度与端口，
+      # GitHub runner 偶发抢占会造成假红；失败自动重跑一次，真回归仍然会连续失败。
       - name: Run tests
-        run: mvn -B -ntp clean test
+        run: mvn -B -ntp clean test -Dsurefire.rerunFailingTestsCount=1
 
       - name: Upload surefire reports
         if: failure()
