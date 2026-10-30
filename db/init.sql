@@ -187,6 +187,38 @@ CREATE TABLE `sys_device_group` (
   KEY `idx_group_user` (`userId`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='设备分组表';
 /*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `sys_music_play_log`;
+CREATE TABLE `sys_music_play_log` (
+  `logId` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `deviceId` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '点播设备',
+  `musicId` bigint unsigned DEFAULT NULL COMMENT '歌曲ID',
+  `keyword` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '搜索词',
+  `songName` varchar(200) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '实际播放文件名',
+  `finished` char(1) COLLATE utf8mb4_unicode_ci DEFAULT '0' COMMENT '是否播完',
+  `createTime` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '点播时间',
+  `updateTime` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`logId`),
+  KEY `idx_play_music` (`musicId`),
+  KEY `idx_play_device` (`deviceId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='曲库点播记录';
+
+DROP TABLE IF EXISTS `sys_music`;
+CREATE TABLE `sys_music` (
+  `musicId` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `fileName` varchar(200) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '磁盘文件名',
+  `title` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '歌名',
+  `artist` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '歌手',
+  `aliases` varchar(300) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '别名，逗号分隔',
+  `durationSec` int DEFAULT NULL COMMENT '时长(秒)',
+  `sizeBytes` bigint DEFAULT NULL COMMENT '文件大小',
+  `playCount` int DEFAULT '0' COMMENT '点播次数',
+  `state` char(1) COLLATE utf8mb4_unicode_ci DEFAULT '1' COMMENT '1可用 0下架',
+  `createTime` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updateTime` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`musicId`),
+  UNIQUE KEY `uk_music_file` (`fileName`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='曲库';
+
 DROP TABLE IF EXISTS `sys_dialogue_metric`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
@@ -721,8 +753,9 @@ INSERT INTO `sys_auth_role` (`authRoleId`, `authRoleName`, `roleKey`, `descripti
 /*!40000 ALTER TABLE `sys_auth_role` ENABLE KEYS */;
 
 /*!40000 ALTER TABLE `sys_auth_role_permission` DISABLE KEYS */;
-INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (210,858,'曲库列表','system:file:api:list','api',NULL,NULL,NULL,3,'1','1','2026-10-30 00:00:00','2026-10-30 00:00:00');
-INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (211,858,'删除曲库文件','system:file:api:delete','api',NULL,NULL,NULL,4,'1','1','2026-10-30 00:00:00','2026-10-30 00:00:00');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (210,17,'曲库列表','system:file:api:list','api',NULL,NULL,NULL,3,'1','1','2026-10-30 00:00:00','2026-10-30 00:00:00');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (211,17,'删除曲库文件','system:file:api:delete','api',NULL,NULL,NULL,4,'1','1','2026-10-30 00:00:00','2026-10-30 00:00:00');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (212,17,'点播记录','system:file:api:plays','api',NULL,NULL,NULL,5,'1','1','2026-10-30 00:00:00','2026-10-30 00:00:00');
 INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (1,1,9,'2026-10-28 00:37:44');
 INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (2,1,54,'2026-10-28 00:37:44');
 INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (3,1,53,'2026-10-28 00:37:44');

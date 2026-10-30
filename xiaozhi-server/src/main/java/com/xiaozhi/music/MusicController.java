@@ -27,6 +27,9 @@ public class MusicController {
     @Resource
     private RuntimePathConfig runtimePathConfig;
 
+    @Resource
+    private com.xiaozhi.music.service.MusicLibraryService musicLibraryService;
+
     @PostMapping("/music")
     @ResponseBody
     @SaCheckPermission("system:file:api:upload")
@@ -52,6 +55,7 @@ public class MusicController {
                 throw new IllegalArgumentException("非法文件名");
             }
             file.transferTo(target);
+            musicLibraryService.register(safeName);
             return ApiResponse.success("上传成功", safeName);
         } catch (IOException e) {
             log.error("上传失败", e);
@@ -59,36 +63,20 @@ public class MusicController {
         }
     }
 
-    /** 曲库列表：文件名即歌名，附带大小与修改时间 */
+    /** 曲库列表：目录里新出现的文件会自动补登记，返回标题/歌手/时长/点播次数 */
     @GetMapping("/music")
     @ResponseBody
     @SaCheckPermission("system:file:api:list")
     public ApiResponse<Object> listMusic() {
-        Path musicPath = Path.of(runtimePathConfig.getMusicDir()).toAbsolutePath().normalize();
-        if (!Files.isDirectory(musicPath)) {
-            return ApiResponse.success(java.util.List.of());
-        }
-        try (var stream = Files.list(musicPath)) {
-            var rows = stream.filter(Files::isRegularFile)
-                    .map(file -> {
-                        java.util.Map<String, Object> row = new java.util.LinkedHashMap<String, Object>();
-                        String name = file.getFileName().toString();
-                        row.put("name", name);
-                        row.put("size", file.toFile().length());
-                        try {
-                            row.put("updateTime", Files.getLastModifiedTime(file).toString());
-                        } catch (IOException e) {
-                            row.put("updateTime", "");
-                        }
-                        return row;
-                    })
-                    .sorted(java.util.Comparator.comparing(row -> String.valueOf(row.get("name"))))
-                    .toList();
-            return ApiResponse.success(rows);
-        } catch (IOException e) {
-            log.error("读取曲库失败", e);
-            throw new OperationFailedException("读取曲库失败", e);
-        }
+        return ApiResponse.success(musicLibraryService.listAndSync());
+    }
+
+    /** 点播记录 */
+    @GetMapping("/music/plays")
+    @ResponseBody
+    @SaCheckPermission("system:file:api:plays")
+    public ApiResponse<Object> recentPlays(@RequestParam(value = "limit", defaultValue = "20") int limit) {
+        return ApiResponse.success(musicLibraryService.recentPlays(limit));
     }
 
     /** 删除曲库里的一个文件 */
@@ -107,6 +95,7 @@ public class MusicController {
         }
         try {
             Files.deleteIfExists(target);
+            musicLibraryService.remove(name);
             return ApiResponse.success("已删除", null);
         } catch (IOException e) {
             log.error("删除音乐失败: {}", target, e);

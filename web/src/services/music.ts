@@ -1,9 +1,23 @@
 import { http } from './request'
 
 export interface MusicFile {
-  name: string
-  size: number
-  updateTime: string
+  musicId?: number
+  fileName: string
+  title?: string
+  artist?: string
+  durationSec?: number
+  sizeBytes?: number
+  playCount?: number
+  state?: string
+  createTime?: string
+}
+
+export interface MusicPlayLog {
+  logId: number
+  deviceId?: string
+  keyword?: string
+  songName?: string
+  createTime?: string
 }
 
 export function listMusic() {
@@ -16,6 +30,10 @@ export function uploadMusic(file: File) {
   return http.post<string>('/file/music', form, {
     headers: { 'Content-Type': 'multipart/form-data' },
   })
+}
+
+export function listMusicPlays(limit = 20) {
+  return http.get<MusicPlayLog[]>('/file/music/plays', { limit })
 }
 
 export function deleteMusic(name: string) {

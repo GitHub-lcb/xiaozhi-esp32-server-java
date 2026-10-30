@@ -39,6 +39,9 @@ public class LocalMusicPlayer implements ToolsGlobalRegistry.GlobalFunction {
     @Resource
     private RuntimePathConfig runtimePathConfig;
 
+    @Resource
+    private com.xiaozhi.music.service.MusicLibraryService musicLibraryService;
+
     @Tool(name = TOOL_NAME, description = "音乐播放器,播放指定名称的歌曲", returnDirect = true)
     public String playMusic(@ToolParam(description = "要播放的歌曲名称") String songName, ToolContext toolContext) {
         String sessionId = (String) toolContext.getContext().get(Persona.TOOL_CONTEXT_SESSION_ID_KEY);
@@ -51,7 +54,9 @@ public class LocalMusicPlayer implements ToolsGlobalRegistry.GlobalFunction {
         }
 
         try {
-            Path musicFile = resolveMusicFile(songName);
+            // 优先按曲库元数据匹配（别名/歌名/歌手），命中后按文件名定位磁盘文件
+            com.xiaozhi.common.model.bo.MusicBO matched = musicLibraryService.match(songName);
+            Path musicFile = matched == null ? resolveMusicFile(songName) : resolveMusicFile(matched.getFileName());
             if (musicFile == null) {
                 var songs = listSongs();
                 if (songs.isEmpty()) {
@@ -59,6 +64,8 @@ public class LocalMusicPlayer implements ToolsGlobalRegistry.GlobalFunction {
                 }
                 return "我这里没有《" + songName + "》。可以播的有：" + String.join("、", songs.subList(0, Math.min(8, songs.size())));
             }
+            String deviceId = chatSession.getDevice() == null ? null : chatSession.getDevice().getDeviceId();
+            musicLibraryService.logPlay(deviceId, matched, songName);
             scheduler.schedule(() -> {
                 // 必须异步处理，也就是先返回一个回应用户的字符串，再开始播放。
                 chatSession.getPlayer().play(songName, musicFile);

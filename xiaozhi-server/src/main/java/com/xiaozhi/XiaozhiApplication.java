@@ -77,6 +77,7 @@ import lombok.extern.slf4j.Slf4j;
     "com.xiaozhi.command.dal.mysql.mapper",
     "com.xiaozhi.device.dal.mysql.mapper",
     "com.xiaozhi.devicegroup.dal.mysql.mapper",
+    "com.xiaozhi.music.dal.mysql.mapper",
     "com.xiaozhi.firmware.dal.mysql.mapper",
     "com.xiaozhi.knowledge.dal.mysql.mapper",
     "com.xiaozhi.mcptoolexclude.dal.mysql.mapper",
