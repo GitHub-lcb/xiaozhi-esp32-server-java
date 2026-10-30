@@ -16,6 +16,8 @@ public class MusicBO {
     private Integer durationSec;
     private Long sizeBytes;
     private Integer playCount;
+    /** "1" 已上架、"0" 已下架；下架保留行是为了不丢点播历史 */
     private String state;
     private LocalDateTime createTime;
+    private LocalDateTime updateTime;
 }
