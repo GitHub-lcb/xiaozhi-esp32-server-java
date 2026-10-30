@@ -163,8 +163,8 @@ services:
     volumes:
       - audio_data:/app/audio
       - uploads_data:/app/uploads
-      # 音乐库：放 mp3 即可点播，与 uploads 分开便于单独备份/清理
-      - music_data:/app/uploads/music
+      # 音乐库：映射到宿主机 ./music，直接 scp 传歌即可
+      - ./music:/app/uploads/music
       - dialogue_logs:/app/logs
     healthcheck:
       test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/8092'"]
@@ -213,7 +213,6 @@ volumes:
   redis_data:
   emqx_data:
   emqx_log:
-  music_data:
   audio_data:            # 对话录音与 TTS 缓存
   uploads_data:          # 用户上传文件
   server_logs:
