@@ -242,6 +242,10 @@ public class PersonaFactory {
             }
         }
         String voiceName = role.getVoiceName();
+        // 换音色是否生效，最终就看这一行：构建时用的到底是不是新音色
+        log.info("构建 Persona roleId={} voice={} ttsProvider={} pitch={} speed={}",
+                role.getRoleId(), voiceName, ttsConfig == null ? "" : ttsConfig.getProvider(),
+                role.getTtsPitch(), role.getTtsSpeed());
         TtsService ttsService = ttsFactory.getTtsService(ttsConfig, voiceName, role.getTtsPitch(), role.getTtsSpeed());
 
         return SynthesizerFactory.create(session, ttsService, player);
