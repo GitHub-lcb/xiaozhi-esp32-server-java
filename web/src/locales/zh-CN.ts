@@ -1344,10 +1344,13 @@ export default {
       error404: '404 - 页面不存在',
     },
     parent: {
-      roleManagement: '角色管理',
-      configManagement: '配置管理',
-      settings: '设置',
-      memoryManagement: '记忆管理',
+      deviceCenter: '设备中心',
+      agent: '智能体',
+      message: '消息与提醒',
+      configManagement: '配置中心',
+      memoryManagement: '对话与记忆',
+      settings: '系统管理',
+      experience: '体验与门户',
     },
   },
 

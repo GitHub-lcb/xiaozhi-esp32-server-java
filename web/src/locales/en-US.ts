@@ -1345,10 +1345,13 @@ export default {
       error404: '404 - Not Found',
     },
     parent: {
-      roleManagement: 'Role Management',
+      deviceCenter: 'Devices',
+      agent: 'Agent',
+      message: 'Messages',
       configManagement: 'Configuration',
-      settings: 'Settings',
-      memoryManagement: 'Memory Management',
+      memoryManagement: 'Memory',
+      settings: 'System',
+      experience: 'Experience',
     },
   },
 

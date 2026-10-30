@@ -27,14 +27,25 @@ export function useMenu() {
   )
   
   // 根级子菜单keys（用于手风琴模式）
-  const rootSubmenuKeys = ['router.parent.roleManagement', 'router.parent.configManagement', 'router.parent.settings', 'router.parent.memoryManagement']
+  const rootSubmenuKeys = [
+    'router.parent.deviceCenter',
+    'router.parent.agent',
+    'router.parent.message',
+    'router.parent.configManagement',
+    'router.parent.memoryManagement',
+    'router.parent.settings',
+    'router.parent.experience',
+  ]
 
   // 父菜单图标映射
   const parentIconMap: Record<string, string> = {
-    'router.parent.roleManagement': 'UserAddOutlined',
+    'router.parent.deviceCenter': 'DesktopOutlined',
+    'router.parent.agent': 'RobotOutlined',
+    'router.parent.message': 'BellOutlined',
     'router.parent.configManagement': 'SettingOutlined',
-    'router.parent.settings': 'SettingOutlined',
     'router.parent.memoryManagement': 'DatabaseOutlined',
+    'router.parent.settings': 'ToolOutlined',
+    'router.parent.experience': 'AppstoreOutlined',
   }
 
   // 获取所有菜单项（从路由配置中获取）

@@ -54,6 +54,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('../views/UserView.vue'),
         meta: {
           title: 'router.title.user',
+          parent: 'router.parent.settings',
           icon: 'TeamOutlined',
           requiresAuth: true,
           permission: 'system:user',
@@ -65,6 +66,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('../views/DeviceView.vue'),
         meta: {
           title: 'router.title.device',
+          parent: 'router.parent.deviceCenter',
           icon: 'RobotOutlined',
           requiresAuth: true,
           permission: 'system:device',
@@ -76,6 +78,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('../views/UserPortalView.vue'),
         meta: {
           title: 'router.title.portal',
+          parent: 'router.parent.experience',
           icon: 'AppstoreOutlined',
           requiresAuth: true,
           permission: 'system:dashboard',
@@ -87,6 +90,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('../views/PluginView.vue'),
         meta: {
           title: 'router.title.plugin',
+          parent: 'router.parent.settings',
           icon: 'ApiOutlined',
           requiresAuth: true,
           permission: 'system:config',
@@ -98,6 +102,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('../views/DeviceGroupView.vue'),
         meta: {
           title: 'router.title.deviceGroup',
+          parent: 'router.parent.deviceCenter',
           icon: 'DeploymentUnitOutlined',
           requiresAuth: true,
           permission: 'system:device',
@@ -109,6 +114,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('../views/ThemeResourceView.vue'),
         meta: {
           title: 'router.title.themeResource',
+          parent: 'router.parent.agent',
           icon: 'ShopOutlined',
           requiresAuth: true,
           permission: 'system:role:api:list',
@@ -120,6 +126,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('../views/VoiceCloneView.vue'),
         meta: {
           title: 'router.title.voiceClone',
+          parent: 'router.parent.agent',
           icon: 'AudioOutlined',
           requiresAuth: true,
           permission: 'system:voice-clone',
@@ -131,6 +138,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('../views/MemoryGraphView.vue'),
         meta: {
           title: 'router.title.memoryGraph',
+          parent: 'router.parent.agent',
           icon: 'ShareAltOutlined',
           requiresAuth: true,
           permission: 'system:memory-graph',
@@ -142,6 +150,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('../views/MemoryFactView.vue'),
         meta: {
           title: 'router.title.memoryFact',
+          parent: 'router.parent.agent',
           icon: 'DatabaseOutlined',
           requiresAuth: true,
           permission: 'system:memory-fact',
@@ -153,6 +162,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('../views/VoiceprintView.vue'),
         meta: {
           title: 'router.title.voiceprint',
+          parent: 'router.parent.agent',
           icon: 'SoundOutlined',
           requiresAuth: true,
           permission: 'system:voiceprint',
@@ -164,6 +174,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('../views/KnowledgeView.vue'),
         meta: {
           title: 'router.title.knowledge',
+          parent: 'router.parent.agent',
           icon: 'BookOutlined',
           requiresAuth: true,
           permission: 'system:knowledge',
@@ -175,6 +186,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('../views/ReminderView.vue'),
         meta: {
           title: 'router.title.reminder',
+          parent: 'router.parent.message',
           icon: 'ClockCircleOutlined',
           requiresAuth: true,
           permission: 'system:reminder',
@@ -186,6 +198,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('../views/PushView.vue'),
         meta: {
           title: 'router.title.push',
+          parent: 'router.parent.message',
           icon: 'NotificationOutlined',
           requiresAuth: true,
           permission: 'system:push',
@@ -197,6 +210,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('../views/FirmwareView.vue'),
         meta: {
           title: 'router.title.firmware',
+          parent: 'router.parent.deviceCenter',
           icon: 'CloudUploadOutlined',
           requiresAuth: true,
           permission: 'system:firmware',
@@ -208,6 +222,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('../views/RoleView.vue'),
         meta: {
           title: 'router.title.role',
+          parent: 'router.parent.agent',
           icon: 'UserAddOutlined',
           requiresAuth: true,
           permission: 'system:role',
@@ -219,8 +234,8 @@ const routes: RouteRecordRaw[] = [
         component: () => import('../views/TemplateView.vue'),
         meta: {
           title: 'router.title.template',
+          parent: 'router.parent.agent',
           icon: 'SnippetsOutlined',
-          parent: 'router.parent.roleManagement',
           requiresAuth: true,
           permission: 'system:prompt-template',
           hideInMenu: true
@@ -301,6 +316,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('../views/ChatView.vue'),
         meta: {
           title: 'router.title.chat',
+          parent: 'router.parent.experience',
           icon: 'MessageOutlined',
           requiresAuth: true,
           permission: 'system:chat',
@@ -312,6 +328,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('../views/AuthRoleView.vue'),
         meta: {
           title: 'router.title.authRole',
+          parent: 'router.parent.settings',
           icon: 'SafetyCertificateOutlined',
           requiresAuth: true,
           permission: 'system:auth-role',
