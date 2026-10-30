@@ -59,6 +59,61 @@ public class MusicController {
         }
     }
 
+    /** 曲库列表：文件名即歌名，附带大小与修改时间 */
+    @GetMapping("/music")
+    @ResponseBody
+    @SaCheckPermission("system:file:api:list")
+    public ApiResponse<Object> listMusic() {
+        Path musicPath = Path.of(runtimePathConfig.getMusicDir()).toAbsolutePath().normalize();
+        if (!Files.isDirectory(musicPath)) {
+            return ApiResponse.success(java.util.List.of());
+        }
+        try (var stream = Files.list(musicPath)) {
+            var rows = stream.filter(Files::isRegularFile)
+                    .map(file -> {
+                        java.util.Map<String, Object> row = new java.util.LinkedHashMap<String, Object>();
+                        String name = file.getFileName().toString();
+                        row.put("name", name);
+                        row.put("size", file.toFile().length());
+                        try {
+                            row.put("updateTime", Files.getLastModifiedTime(file).toString());
+                        } catch (IOException e) {
+                            row.put("updateTime", "");
+                        }
+                        return row;
+                    })
+                    .sorted(java.util.Comparator.comparing(row -> String.valueOf(row.get("name"))))
+                    .toList();
+            return ApiResponse.success(rows);
+        } catch (IOException e) {
+            log.error("读取曲库失败", e);
+            throw new OperationFailedException("读取曲库失败", e);
+        }
+    }
+
+    /** 删除曲库里的一个文件 */
+    @DeleteMapping("/music")
+    @ResponseBody
+    @SaCheckPermission("system:file:api:delete")
+    public ApiResponse<Void> deleteMusic(@RequestParam("name") String name) {
+        if (!StringUtils.hasText(name)) {
+            throw new IllegalArgumentException("文件名不能为空");
+        }
+        Path musicPath = Path.of(runtimePathConfig.getMusicDir()).toAbsolutePath().normalize();
+        // 只允许删除音乐目录下的单层文件，挡住 ../ 与子目录
+        Path target = musicPath.resolve(Paths.get(name).getFileName().toString()).normalize();
+        if (!target.startsWith(musicPath)) {
+            throw new IllegalArgumentException("非法文件名");
+        }
+        try {
+            Files.deleteIfExists(target);
+            return ApiResponse.success("已删除", null);
+        } catch (IOException e) {
+            log.error("删除音乐失败: {}", target, e);
+            throw new OperationFailedException("删除失败", e);
+        }
+    }
+
     private static String baseName(String originalFilename) {
         if (!StringUtils.hasText(originalFilename)) {
             return null;

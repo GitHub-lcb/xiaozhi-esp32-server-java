@@ -1308,6 +1308,7 @@ export default {
 
   router: {
     title: {
+      music: '曲库',
       login: '登录',
       register: '注册',
       forget: '忘记密码',

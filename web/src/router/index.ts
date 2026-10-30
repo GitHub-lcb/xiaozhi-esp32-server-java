@@ -109,6 +109,18 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
+        path: 'music',
+        name: 'music',
+        component: () => import('../views/MusicView.vue'),
+        meta: {
+          title: 'router.title.music',
+          parent: 'router.parent.agent',
+          icon: 'CustomerServiceOutlined',
+          requiresAuth: true,
+          permission: 'system:file',
+        },
+      },
+      {
         path: 'theme-resource',
         name: 'theme-resource',
         component: () => import('../views/ThemeResourceView.vue'),

@@ -721,6 +721,8 @@ INSERT INTO `sys_auth_role` (`authRoleId`, `authRoleName`, `roleKey`, `descripti
 /*!40000 ALTER TABLE `sys_auth_role` ENABLE KEYS */;
 
 /*!40000 ALTER TABLE `sys_auth_role_permission` DISABLE KEYS */;
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (210,858,'曲库列表','system:file:api:list','api',NULL,NULL,NULL,3,'1','1','2026-10-30 00:00:00','2026-10-30 00:00:00');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (211,858,'删除曲库文件','system:file:api:delete','api',NULL,NULL,NULL,4,'1','1','2026-10-30 00:00:00','2026-10-30 00:00:00');
 INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (1,1,9,'2026-10-28 00:37:44');
 INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (2,1,54,'2026-10-28 00:37:44');
 INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (3,1,53,'2026-10-28 00:37:44');

@@ -1309,6 +1309,7 @@ export default {
 
   router: {
     title: {
+      music: 'Music Library',
       login: 'Login',
       register: 'Register',
       forget: 'Forgot Password',

@@ -19,6 +19,7 @@ export const ROUTES = {
   MEMORY_GRAPH: '/memory-graph',
   VOICE_CLONE: '/voice-clone',
   THEME: '/theme-resource',
+  MUSIC: '/music',
   DEVICE_GROUP: '/device-group',
   PLUGIN: '/plugin',
   PORTAL: '/portal',
