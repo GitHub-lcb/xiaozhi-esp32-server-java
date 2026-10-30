@@ -24,7 +24,7 @@ x-app-environment: &app-environment
   # 以下几项之前只写在 .env.example 里，没接进容器，等于开关不存在；现在显式下发
   XIAOZHI_OPS_TOKEN: ${XIAOZHI_OPS_TOKEN:-}
   XIAOZHI_MQTT_ENABLED: ${XIAOZHI_MQTT_ENABLED:-false}
-  XIAOZHI_MQTT_BROKER: ${XIAOZHI_MQTT_BROKER:-}
+  XIAOZHI_MQTT_BROKER: ${XIAOZHI_MQTT_BROKER:-tcp://emqx:1883}
   XIAOZHI_MQTT_USERNAME: ${XIAOZHI_MQTT_USERNAME:-}
   XIAOZHI_MQTT_PASSWORD: ${XIAOZHI_MQTT_PASSWORD:-}
   XIAOZHI_MEMORY_AUTO_EXTRACT: ${XIAOZHI_MEMORY_AUTO_EXTRACT:-false}
@@ -83,6 +83,37 @@ services:
           cpus: '0.25'
           memory: 128M
 
+  # MQTT broker：设备的控制面通道（唤醒、主动推送、远程指令、状态上报）
+  # 匿名访问只在本 compose 内网有效；对外不映射 1883，避免裸奔在公网
+  emqx:
+    image: emqx/emqx:5.8.4
+    restart: always
+    environment:
+      EMQX_NODE_NAME: emqx@node1.emqx.io
+      EMQX_CLUSTER__DISCOVERY_STRATEGY: static
+      EMQX_DASHBOARD__DEFAULT_PASSWORD: ${EMQX_DASHBOARD_PASSWORD:-xiaozhi2024}
+      EMQX_ALLOW_ANONYMOUS: 'true'
+      TZ: ${TZ:-Asia/Shanghai}
+    ports:
+      - "127.0.0.1:${EMQX_DASHBOARD_PORT:-18083}:18083"   # 控制台只监听回环
+      - "${EMQX_PORT:-1883}:1883"                          # 设备直连端口
+    volumes:
+      - emqx_data:/opt/emqx/data
+      - emqx_log:/opt/emqx/log
+    healthcheck:
+      test: ["CMD", "/opt/emqx/bin/emqx", "ctl", "status"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    networks:
+      - xiaozhi
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
   server:
     image: ${XIAOZHI_IMAGE_SERVER:-ghcr.io/github-lcb/xiaozhi-server}:${XIAOZHI_TAG:-latest}
     container_name: xiaozhi-server
@@ -91,6 +122,8 @@ services:
       mysql:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      emqx:
         condition: service_healthy
     ports:
       - "${SERVER_PORT:-8091}:8091"
@@ -182,6 +215,8 @@ networks:
 volumes:
   mysql_data:
   redis_data:
+  emqx_data:
+  emqx_log:
   audio_data:            # 对话录音与 TTS 缓存
   uploads_data:          # 用户上传文件
   server_logs:
