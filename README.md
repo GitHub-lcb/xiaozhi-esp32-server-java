@@ -119,6 +119,10 @@ Xiaozhi ESP32 Server Java 是基于 [Xiaozhi ESP32](https://github.com/78/xiaozh
 
 ### Docker
 
+> 首次部署、版本发布、回滚与功能开关：见 [docs/DEPLOY.md](docs/DEPLOY.md)。
+> 服务器上发版只需 `./deploy.sh <版本号>`，回滚 `./deploy.sh --rollback`。
+
+
 ```bash
 mkdir xiaozhi && cd xiaozhi
 curl -O https://raw.githubusercontent.com/joey-zhou/xiaozhi-esp32-server-java/main/docker-compose.yml
