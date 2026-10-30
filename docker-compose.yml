@@ -24,7 +24,9 @@ x-app-environment: &app-environment
   # 以下几项之前只写在 .env.example 里，没接进容器，等于开关不存在；现在显式下发
   XIAOZHI_OPS_TOKEN: ${XIAOZHI_OPS_TOKEN:-}
   XIAOZHI_MQTT_ENABLED: ${XIAOZHI_MQTT_ENABLED:-false}
-  XIAOZHI_MQTT_BROKER: ${XIAOZHI_MQTT_BROKER:-tcp://emqx:1883}
+  # 注意：属性名是 xiaozhi.mqtt.broker-url，环境变量必须写成 XIAOZHI_MQTT_BROKER_URL
+  XIAOZHI_MQTT_BROKER_URL: ${XIAOZHI_MQTT_BROKER_URL:-tcp://emqx:1883}
+  XIAOZHI_MQTT_PUBLIC_ENDPOINT: ${XIAOZHI_MQTT_PUBLIC_ENDPOINT:-}
   XIAOZHI_MQTT_USERNAME: ${XIAOZHI_MQTT_USERNAME:-}
   XIAOZHI_MQTT_PASSWORD: ${XIAOZHI_MQTT_PASSWORD:-}
   XIAOZHI_MEMORY_AUTO_EXTRACT: ${XIAOZHI_MEMORY_AUTO_EXTRACT:-false}
@@ -89,8 +91,6 @@ services:
     image: emqx/emqx:5.8.4
     restart: always
     environment:
-      EMQX_NODE_NAME: emqx@node1.emqx.io
-      EMQX_CLUSTER__DISCOVERY_STRATEGY: static
       EMQX_DASHBOARD__DEFAULT_PASSWORD: ${EMQX_DASHBOARD_PASSWORD:-xiaozhi2024}
       EMQX_ALLOW_ANONYMOUS: 'true'
       TZ: ${TZ:-Asia/Shanghai}
@@ -100,12 +100,6 @@ services:
     volumes:
       - emqx_data:/opt/emqx/data
       - emqx_log:/opt/emqx/log
-    healthcheck:
-      test: ["CMD", "/opt/emqx/bin/emqx", "ctl", "status"]
-      interval: 15s
-      timeout: 10s
-      retries: 10
-      start_period: 30s
     networks:
       - xiaozhi
     logging: *default-logging
@@ -124,7 +118,7 @@ services:
       redis:
         condition: service_healthy
       emqx:
-        condition: service_healthy
+        condition: service_started
     ports:
       - "${SERVER_PORT:-8091}:8091"
     environment: *app-environment
