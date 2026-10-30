@@ -39,11 +39,18 @@
 
 ## 四、服务端曲库使用
 
-```bash
-# 宿主机上把 mp3 放进命名卷（music_data → /app/uploads/music）
-docker cp 海阔天空.mp3 xiaozhi-dialogue:/app/uploads/music/
-# 或者在 compose 里把它换成宿主机目录映射，便于直接拷贝
+曲库目录在宿主机是仓库根目录下的 `./music`，同时挂进 server 与 dialogue 两个容器：
+
+```text
+./music  ──bind──▶  /app/uploads/music   (server：后台曲库页上传 / 列表 / 删除 / 试听)
+         ──bind──▶  /app/uploads/music   (dialogue：LocalMusicPlayer 点播)
 ```
+
+- 后台管理台（智能体 → 曲库）上传、删除、上下架、同步目录都直接作用于这份目录，不需要再 `docker cp`
+- 也可以手工把 mp3 放到宿主机的 `./music`（文件名建议 `歌手 - 歌名.mp3`），回后台点「同步目录」即可登记
+- 「试听」返回的是带时效签名的 `/uploads/music/...` 地址，走的是 `LocalFileAccessInterceptor` 的签名校验，链接过期后重新点一次即可
+- 曲库权限：`system:file:api:list / plays / update / sync / delete / preview / upload`，管理员角色默认拥有（升级脚本 `db/upgrade/2026-10-30__music_console.sql` 可给存量库补齐；后端这些端点同时声明了 `orRole="admin"` 兜底）
+- 找不到歌时的可点列表来自曲库 DB（`sys_music`），新文件要先「同步目录」或打开一次曲库页才会登记
 
 歌名匹配规则（`LocalMusicPlayer.resolveMusicFile`）：
 

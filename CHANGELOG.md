@@ -79,8 +79,30 @@
   按本轮用户问题与工具名/描述的字符重合度粗排，只把最相关的一批交给模型；工具数不超过阈值时原样下发，
   不改变现有行为。纯本地计算，不依赖 embedding，也不额外消耗 token。
 
+- feat: **曲库管理台（重构）**。后台「智能体 → 曲库」从「一个上传按钮 + 一张裸表」重做为可用的一等页面：
+  统计卡（曲目总数 / 已上架 / 累计点播 / 占用空间）、关键字与状态筛选、服务端分页排序、编辑歌名/歌手/别名、
+  上架/下架、删除、扫描目录同步（新文件自动登记、文件缺失自动下架）、在线试听（签名 URL + 原生音频控件）、
+  点播记录分页（补设备名与命中歌名）。后端接口从「一次性全量列表」升级为
+  `GET /api/file/music`（分页/关键字/状态/排序）、`/stats`、`/plays`、`PUT /{musicId}`、
+  `DELETE /{musicId}`、`POST /sync`、`GET /{musicId}/audio-url`，新增权限键
+  `system:file:api:update|sync|preview`；列表/播放/删除语义保持不变，设备点播链路不受影响。
+  补齐 `music.*` 中英文文案 70 余条，页面不再出现裸翻译 key。
+
+- fix: **曲库页打开就「权限不足」**。旧升级脚本只建了 `system:file:api:list/plays/delete` 三条权限行，
+  没有授权给管理员角色（`authRoleId=1`），管理员也会被 Sa-Token 拦成 403。现在升级脚本按 permissionKey
+  幂等补授权，后端曲库端点同时声明 `orRole="admin"` 兜底；架构测试新增「init.sql 里每条权限都必须授给管理员」
+  的守卫，避免下次新增功能再漏。`db/upgrade/2026-10-30__music_console.sql` 可在存量库上一次补齐。
+
+- fix: **后台上传的歌设备播不到**。`docker-compose.yml` 原来只把宿主机 `./music` 挂进 dialogue，
+  server 容器里的 `/app/uploads/music` 还是独立的命名卷：后台上传写进命名卷、设备端读宿主机目录，两边互相看不见。
+  现在 server 也挂同一份 `./music`，后台「上传 / 删除 / 同步」与设备点播操作同一批文件。
+
 ### 升级注意
 
+- 已建好的库执行 `db/upgrade/2026-10-30__music_console.sql` 补曲库表、权限行与管理员授权（幂等，可重复执行），
+  然后清一次 Redis 权限缓存（`XiaoZhi:Permission*`）或重启 server；也可在服务器上直接跑 `fix-music-permissions.sh`。
+- `docker-compose.yml` 新增 `./music:/app/uploads/music` 挂载，升级后 `docker compose up -d` 让 server 重新挂载；
+  宿主机 `./music` 里的 mp3 会同时被后台曲库与设备点播看到。
 - 已建好的库执行 `db/upgrade/2026-10-28__firmware.sql` 补表与权限（含 `sys_knowledge_*`、`sys_device_screenshot`、`sys_device_command`、`sys_device_channel`、`sys_push_message`、`sys_reminder` 与对应权限）；新装环境直接执行 `db/init.sql`。
 - 要用 MQTT 通道需配 `XIAOZHI_MQTT_*` 一组环境变量（`XIAOZHI_MQTT_ENABLED=true` 才启用），并让固件重新走一次 OTA 拿到 mqtt 配置。
 - 要用 Prometheus 抓指标，需配置 `XIAOZHI_OPS_TOKEN`，并在抓取配置里带同名请求头。

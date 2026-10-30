@@ -64,6 +64,69 @@ class PermissionKeyContractArchTest {
             .isSubsetOf(declaredInInitSql);
     }
 
+    /**
+     * `sys_auth_role` 里管理员角色的描述就是「拥有所有权限」，但权限行和授权行是两份脚本，
+     * 只建行、忘了给 authRoleId=1 授权，管理员访问对应功能就是恒定 403 ——
+     * 曲库上线时正好踩了这个坑（权限 210/211/212 建了行却没授权）。
+     * 这里按 init.sql 的最终状态两头对账，避免下一次新增功能再漏。
+     */
+    @Test
+    void everyPermissionIsGrantedToAdminRole() {
+        Set<Integer> permissions = permissionIdsDeclaredInInitSql();
+        Set<Integer> adminGrants = adminGrantedPermissionIdsInInitSql();
+
+        assertThat(permissions)
+            .as("从 db/init.sql 没解析出权限行，本类规则会退化成空真")
+            .hasSizeGreaterThan(40);
+        assertThat(adminGrants)
+            .as("从 db/init.sql 没解析出管理员授权行，本类规则会退化成空真")
+            .isNotEmpty();
+
+        Set<Integer> notGranted = new LinkedHashSet<>(permissions);
+        notGranted.removeAll(adminGrants);
+        assertThat(notGranted)
+            .as("这些权限只在 db/init.sql 建了行、没有授给管理员角色（authRoleId=1），管理员访问对应功能会恒定 403")
+            .isEmpty();
+
+        Set<Integer> dangling = new LinkedHashSet<>(adminGrants);
+        dangling.removeAll(permissions);
+        assertThat(dangling)
+            .as("这些授权行指向了 db/init.sql 里根本不存在的 permissionId")
+            .isEmpty();
+    }
+
+    /** 按 `INSERT INTO sys_permission ... VALUES (id, ...)` 收集权限主键 */
+    private static Set<Integer> permissionIdsDeclaredInInitSql() {
+        Set<Integer> ids = new LinkedHashSet<>();
+        String stripped = LINE_COMMENT.matcher(readInitSql()).replaceAll("");
+        Matcher matcher = Pattern.compile("INSERT\\s+INTO\\s+`sys_permission`\\s*\\([^)]*\\)\\s*VALUES\\s*\\((\\d+),")
+            .matcher(stripped);
+        while (matcher.find()) {
+            ids.add(Integer.parseInt(matcher.group(1)));
+        }
+        return ids;
+    }
+
+    /** 按 `INSERT INTO sys_auth_role_permission ... VALUES (id, authRoleId, permissionId, ...)` 收集管理员授权 */
+    private static Set<Integer> adminGrantedPermissionIdsInInitSql() {
+        Set<Integer> ids = new LinkedHashSet<>();
+        String stripped = LINE_COMMENT.matcher(readInitSql()).replaceAll("");
+        Matcher matcher = Pattern.compile("INSERT\\s+INTO\\s+`sys_auth_role_permission`\\s*\\([^)]*\\)\\s*VALUES\\s*\\(\\d+,\\s*1,\\s*(\\d+)")
+            .matcher(stripped);
+        while (matcher.find()) {
+            ids.add(Integer.parseInt(matcher.group(1)));
+        }
+        return ids;
+    }
+
+    private static String readInitSql() {
+        try {
+            return Files.readString(initSqlFile());
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
     private Set<String> permissionKeysUsedInCode() {
         Set<String> keys = new LinkedHashSet<>();
         serverClasses.stream()

@@ -126,6 +126,8 @@ services:
     volumes:
       - audio_data:/app/audio
       - uploads_data:/app/uploads
+      # 曲库：必须和 dialogue 挂同一份宿主机 ./music，否则后台上传的歌写进命名卷、设备端读的是宿主机目录，互相看不见
+      - ./music:/app/uploads/music
       - server_logs:/app/logs
     healthcheck:
       test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/8091'"]

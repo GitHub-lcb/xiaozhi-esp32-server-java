@@ -13,6 +13,9 @@ avatar/
 /audio/
 /data/
 /models/
+# 曲库文件不入库，目录本身保留（compose 挂载点）
+/music/*
+!/music/.gitkeep
 *.zip
 /logs/
 *.tmp
