@@ -8,6 +8,7 @@ import com.xiaozhi.common.model.bo.DeviceChannelBO;
 import com.xiaozhi.common.model.bo.DeviceCommandBO;
 import com.xiaozhi.common.model.req.DeviceCommandReq;
 import com.xiaozhi.common.model.resp.DeviceCommandResp;
+import com.xiaozhi.device.service.DeviceService;
 import com.xiaozhi.communication.common.RedisBroadcast;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,6 +45,9 @@ class DeviceCommandAppServiceTest {
 
     @Mock
     private DeviceChannelService deviceChannelService;
+
+    @Mock
+    private DeviceService deviceService;
 
     @Mock
     private RedisBroadcast redisBroadcast;

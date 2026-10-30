@@ -4,7 +4,7 @@ import com.xiaozhi.channel.service.DeviceChannelService;
 import com.xiaozhi.common.model.bo.DeviceBO;
 import com.xiaozhi.common.model.bo.DeviceChannelBO;
 import com.xiaozhi.device.service.DeviceService;
-import com.xiaozhi.stats.dal.mysql.mapper.StatsMapper;
+import com.xiaozhi.stats.service.StatsQueryService;
 import com.xiaozhi.utils.DateUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,7 +43,7 @@ class StatsAppServiceTest {
     private DeviceChannelService deviceChannelService;
 
     @Mock
-    private StatsMapper statsMapper;
+    private StatsQueryService statsQueryService;
 
     @InjectMocks
     private StatsAppService statsAppService;
@@ -69,8 +69,8 @@ class StatsAppServiceTest {
         online.setDeviceId("a");
         online.setOnlineState(DeviceChannelBO.ONLINE);
         when(deviceChannelService.mapByDeviceIds(any())).thenReturn(Map.of("a", online));
-        when(statsMapper.countMessagesSince(any())).thenReturn(12L, 40L);
-        when(statsMapper.countActiveDevicesSince(any())).thenReturn(2L);
+        when(statsQueryService.countMessagesSince(any())).thenReturn(12L, 40L);
+        when(statsQueryService.countActiveDevicesSince(any())).thenReturn(2L);
 
         Map<String, Object> result = statsAppService.overview(1);
 
@@ -83,7 +83,7 @@ class StatsAppServiceTest {
 
     @Test
     void dailySeriesFillsMissingDaysWithZero() {
-        when(statsMapper.dailyMessages(any())).thenReturn(List.of(Map.of("day", "2026-10-28", "total", 5L)));
+        when(statsQueryService.dailyMessages(any())).thenReturn(List.of(Map.of("day", "2026-10-28", "total", 5L)));
 
         List<Map<String, Object>> series = statsAppService.dailyMessages(3);
 
@@ -95,7 +95,7 @@ class StatsAppServiceTest {
 
     @Test
     void daysAreClampedToASafeRange() {
-        when(statsMapper.dailyMessages(any())).thenReturn(List.of());
+        when(statsQueryService.dailyMessages(any())).thenReturn(List.of());
 
         assertThat(statsAppService.dailyMessages(0)).hasSize(1);
         assertThat(statsAppService.dailyMessages(100000)).hasSize(90);
