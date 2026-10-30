@@ -31,4 +31,4 @@ CREATE TABLE IF NOT EXISTS `sys_music_play_log` (
 
 INSERT IGNORE INTO `sys_permission` (`permissionId`,`parentId`,`name`,`permissionKey`,`permissionType`,`path`,`component`,`icon`,`sort`,`visible`,`status`,`createTime`,`updateTime`)
 VALUES (212,17,'点播记录','system:file:api:plays','api',NULL,NULL,NULL,5,'1','1',NOW(),NOW());
-INSERT IGNORE INTO `sys_auth_role_permission` (`id`,`authRoleId`,`permissionId`,`createTime`,`updateTime`) VALUES (212,1,212,NOW(),NOW());
+INSERT IGNORE INTO `sys_auth_role_permission` (`authRoleId`,`permissionId`,`createTime`) VALUES (1,212,NOW());

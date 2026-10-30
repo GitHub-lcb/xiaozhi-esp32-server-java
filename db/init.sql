@@ -873,6 +873,9 @@ INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `cre
 INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (144,1,116,'2026-10-28 00:37:45');
 INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (145,1,117,'2026-10-28 00:37:45');
 INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (146,1,118,'2026-10-28 00:37:45');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (147,1,210,'2026-10-30 00:00:00');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (148,1,211,'2026-10-30 00:00:00');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (149,1,212,'2026-10-30 00:00:00');
 /*!40000 ALTER TABLE `sys_auth_role_permission` ENABLE KEYS */;
 
 /*!40000 ALTER TABLE `sys_permission` DISABLE KEYS */;
