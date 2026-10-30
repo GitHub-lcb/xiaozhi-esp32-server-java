@@ -40,6 +40,16 @@ xiaozhi:
     presence-ttl-seconds: ${XIAOZHI_MQTT_PRESENCE_TTL:120}
 
 # ============================================================
+# 联网搜索：DeepSeek 独立 Search API（POST /v1/tools/search）
+# 不配 api-key 时，角色用的是 DeepSeek 模型就自动复用该模型配置里的 Key
+# ============================================================
+  search:
+    api-key: ${XIAOZHI_SEARCH_API_KEY:}
+    base-url: ${XIAOZHI_SEARCH_BASE_URL:https://api.deepseek.com}
+    count: ${XIAOZHI_SEARCH_COUNT:5}
+    timeout-seconds: ${XIAOZHI_SEARCH_TIMEOUT_SECONDS:8}
+
+# ============================================================
 # Sa-Token（共用字段见 application-common.yml）
 # ============================================================
 sa-token:

@@ -103,6 +103,24 @@ Docker 镜像已内置全部本地模型与原生库。源码部署按需下载�
 ./xiaozhi.sh download             # 以上全部
 ```
 
+## 联网搜索
+
+设备问新闻、天气、股价这类**实时信息**时，只配大模型是不够的——模型 API 本身不抓网页。
+本仓库内置了 `web_search` 工具，对话时由模型按需调用，走 **DeepSeek 独立 Search API**
+（`POST https://api.deepseek.com/v1/tools/search`，按成功请求计费）：
+
+- **零配置**：角色选的聊天模型是 DeepSeek 时，自动复用「模型配置」里那个 API Key，不用额外填。
+- **单独配**：角色用的是其它模型（OpenAI / 通义 / Ollama…）也想联网时，在 `.env` 里配一个
+  DeepSeek Key：`XIAOZHI_SEARCH_API_KEY=sk-xxx`。
+- **开关**：工具默认对所有角色可用；不想让某个角色联网，在「角色配置 → 编辑 → MCP 工具」里关掉
+  `web_search` 即可。
+- **参数**：`XIAOZHI_SEARCH_COUNT`（返回条数，默认 5）、`XIAOZHI_SEARCH_TIMEOUT_SECONDS`（超时，默认 8）、
+  `XIAOZHI_SEARCH_BASE_URL`（接口地址，默认 `https://api.deepseek.com`，走代理时改这里）。
+- **行为**：只取标题、摘要和链接，交给模型总结后用口语播报；接口失败/超时只回一句“联网搜索暂时不可用”，
+  不影响整轮对话。没有可用 Key 时工具不会下发给模型，模型不会尝试调用。
+
+接口与计费说明见 [DeepSeek Search & Fetch 文档](https://api-docs.deepseek.com/guides/search)。
+
 ## 端口
 
 | 端口 | 进程 | 用途 |
