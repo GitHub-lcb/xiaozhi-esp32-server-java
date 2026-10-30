@@ -36,4 +36,16 @@ export default defineConfigWithVueTs(
       'vue/multi-word-component-names': 'off',
     },
   },
+
+  {
+    // typescript-eslint 8.57 起 no-unused-vars 的 caughtErrors 默认值从 none 变成 all，
+    // 仓库里 53 处既有 `catch (error) {}`（.vue 里错误已被统一拦截器弹过）会因此全部报错。
+    // 这里对 .vue 显式保持旧行为；.ts 的未使用检查本来由 oxlint 负责，不在这里重新打开。
+    // 批量改成 `catch {}` 留作独立清理，不在本次曲库改动里混。
+    name: 'app/unused-catch-binding',
+    files: ['**/*.vue'],
+    rules: {
+      '@typescript-eslint/no-unused-vars': ['error', { caughtErrors: 'none' }],
+    },
+  },
 )

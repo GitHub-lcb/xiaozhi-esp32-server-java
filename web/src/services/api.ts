@@ -61,6 +61,7 @@ export default {
   deviceGroup: '/device-group',
   plugin: '/plugin',
   upload: '/file/upload',
+  music: '/file/music',
   memory: {
     summary: '/memory/summary',
   },
