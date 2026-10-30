@@ -231,6 +231,7 @@ CREATE TABLE `sys_dialogue_metric` (
   `completionTokens` int unsigned DEFAULT '0' COMMENT '回复 token',
   `totalTokens` int unsigned DEFAULT '0' COMMENT '合计 token',
   `latencyMs` bigint unsigned DEFAULT '0' COMMENT '本轮从收句到首句可播的耗时(毫秒)',
+  `ttsFirstChunkMs` bigint DEFAULT NULL COMMENT 'TTS首块音频耗时(毫秒)',
   `createTime` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updateTime` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`metricId`),
