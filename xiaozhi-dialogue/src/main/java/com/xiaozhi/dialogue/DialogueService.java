@@ -230,8 +230,10 @@ public class DialogueService{
             return;
         }
 
-        // isActive() 覆盖待处理/LLM/TTS/Player 任一层活跃
-        Persona persona = session.getPersona();
+        // isActive() 覆盖待处理/LLM/TTS/Player 任一层活跃。
+        // persona 可能因为角色属性变更被清空（换音色等），这里重建而不是直接返回，
+        // 否则改完配置后的第一轮对话会被静默丢弃，表现为"设备没反应"。
+        Persona persona = ensurePersona(session);
         if (persona == null || !persona.isActive()) {
             return;
         }
@@ -365,7 +367,7 @@ public class DialogueService{
                     return;
                 }
 
-                Persona persona = session.getPersona();
+                Persona persona = ensurePersona(session);
                 if (persona == null || persona.getSttService() == null) {
                     releaseDiscardedTurn(session, turnSink);
                     return;
@@ -613,6 +615,25 @@ public class DialogueService{
      *
      * @param session WebSocket会话
      */
+    /**
+     * 取当前 Persona，没有就重建。
+     * <p>
+     * 角色属性（音色、模型、VAD 阈值）变更后，RedisSubscriber 会把 session 上的 Persona 清空，
+     * 让下一轮用新配置重建。如果调用点只判断 null 就丢弃本轮，用户会看到"改完配置设备就没反应了"。
+     */
+    private Persona ensurePersona(ChatSession session) {
+        Persona persona = session.getPersona();
+        if (persona != null) {
+            return persona;
+        }
+        try {
+            return personaFactory.buildPersona(session);
+        } catch (RuntimeException e) {
+            log.warn("重建 Persona 失败 - SessionId: {}", session.getSessionId(), e);
+            return null;
+        }
+    }
+
     /**
      * 同组设备是否由本设备应答。没有分组、协处理器缺失或 Redis 异常时一律放行——
      * 设备叫醒不了比多台一起应答更糟。
