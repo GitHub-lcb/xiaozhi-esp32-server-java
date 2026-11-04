@@ -32,4 +32,5 @@ xiaozhi:
     # 设备连 wss://ws.<domain>/ws/xiaozhi/v1/。留空则按探测到的 IP 走 http/ws。
     # 前提：<domain> 与 ws.<domain> 都要解析到本机，且证书覆盖这两个名字。
     # 换域名用环境变量 XIAOZHI_SERVER_DOMAIN 覆盖，不必改代码。
-    domain: ${XIAOZHI_SERVER_DOMAIN:ai.lichenbo.cn}
+    # 注意：这里不再内置任何默认域名——默认域名属于部署方，写死会把设备指向别人的证书。
+    domain: ${XIAOZHI_SERVER_DOMAIN:}

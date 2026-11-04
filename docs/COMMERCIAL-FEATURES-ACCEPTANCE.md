@@ -1,7 +1,7 @@
 # 商业版功能补齐 · 验收清单
 
 > 对照 `docs/images/feature-comparison.html` 里「开源版 ❌」的 23 项与「🟡」的 4 项，逐条给出交付物与验证方式。
-> 数据库现状：**34 张表、107 条权限种子**，老库执行 `db/upgrade/2026-10-28__firmware.sql`（幂等）。
+> 数据库现状：**36 张表、115 条权限种子**，老库按文件名顺序执行 `db/upgrade/*.sql`（幂等，可重复执行）。
 
 ## 一、已完成（19 项）
 
@@ -37,20 +37,24 @@
 | 音色克隆 | 未接服务商（阿里 CosyVoice / 火山需要控制台开通与凭据） | 实现 `VoiceCloneClient.enroll()`（约 30 行），表/状态机/页面/测试已就绪 |
 | Home Assistant | 无 HA 实例，HTTP 往返未实测 | 配 `base-url` + `token` 后联调 |
 
-## 三、未交付（1 项）
+## 三、部分交付（1 项）
 
-**双向流式交互**：现状是 `LLM → 分句 → 逐句 TTS 合成 → 下发`，即"文本侧已流式"；
-缺的是 **TTS 音频级流式**（不等整句合成完就下发首包）与 **STT 双向流式**（边说边出字）。
+**双向流式交互**：TTS 音频级流式的底座与一家真实流式实现已落地；STT 双向流式尚未交付。
 
-后续路径：
-1. `TtsService` 增加 `synthesizeStream(text, sink)`，Edge/火山/阿里优先实现
-2. `Player` 支持增量帧写入（当前按整句 buffer 下发）
-3. `SttService` 的中间结果回调接入对话状态机（部分 provider 已支持）
-4. 验收标准：首包延迟 < 300ms、打断响应 < 200ms，并用现有音频回归用例覆盖
+- **已落地（TTS 侧）**：`StreamingTtsService.synthesizeStream` 能力接口 + `FileBackedStreamingAdapter`
+  伪流式适配 + `FileSynthesizer` 按 Flux 消费；`VolcengineTtsService` 已 `nativeStreaming()=true`（真流式）。
+  其余 7 家 provider 仍走「整句落文件再分块」，链路统一但首包不会更快。
+- **未交付（STT 侧）**：`SttService` 已支持中间结果回调（云端 provider），但还没有把 partial 下发给设备、
+  也没有接入「边说边出字」的状态机；本地 SenseVoice/Vosk 只能是整段识别。
+- 验收标准不变：首包延迟 < 300ms、打断响应 < 200ms，并用现有音频回归用例覆盖。
+- 后续路径：`docs/STREAMING-DESIGN.md`（注意其 P1/P2 状态已与实际代码不符，需按实更新）
+  与 `docs/GAP-FIX-PLAN.md` §1/§2（按 provider 分批 + 灰度开关）。
 
 ## 四、验证基线
 
 - `mvn compile`：通过
-- 架构守卫 26 项：全绿（模块边界 15、分层 8、时间源 3）
+- 架构守卫 58 项（12 个 ArchTest 类，含模块边界 15、分层 8、时间源 3）：全绿
 - 前端 `vue-tsc --build --force`：通过；locale/路由测试 27 项：通过
 - 已知外部失败：`ImagePublishGuardTest`（断言 upstream 仓库名，与本仓 fork 无关）
+- 2026-11-03 增量：操作日志查询、提醒扫描分布式锁、部署配置透传已交付，回归口径见
+  `docs/GAP-FIX-PLAN.md` §0 与 `CHANGELOG.md` 6.2.0「修复与补强」。

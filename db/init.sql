@@ -726,6 +726,95 @@ CREATE TABLE `sys_user_auth` (
   KEY `idx_userId` (`userId`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户第三方授权表';
 /*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `sys_stackchan_dance`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `sys_stackchan_dance` (
+  `danceId` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '舞蹈ID',
+  `mac` varchar(17) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '设备MAC，统一小写冒号格式',
+  `danceName` varchar(128) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '舞蹈名称',
+  `danceData` longtext COLLATE utf8mb4_unicode_ci COMMENT '舞蹈动作数据，JSON 数组原文',
+  `musicUrl` varchar(512) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '背景音乐地址',
+  `createTime` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updateTime` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`danceId`),
+  KEY `idx_stackchan_dance_mac` (`mac`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='StackChan 设备舞蹈表';
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `sys_stackchan_app`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `sys_stackchan_app` (
+  `appId` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '应用ID',
+  `appName` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '应用名称',
+  `appIconUrl` varchar(512) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '应用图标地址',
+  `description` text COLLATE utf8mb4_unicode_ci COMMENT '应用描述',
+  `firmwareUrl` varchar(512) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '固件/安装包下载地址',
+  `state` tinyint NOT NULL DEFAULT '1' COMMENT '状态：1上架 0下架',
+  `isDeleted` tinyint NOT NULL DEFAULT '0' COMMENT '软删除：0正常 1已删除',
+  `createTime` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updateTime` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`appId`),
+  KEY `idx_stackchan_app_state` (`isDeleted`,`state`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='StackChan App Store 应用表';
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `sys_stackchan_post`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `sys_stackchan_post` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '帖子ID',
+  `mac` varchar(17) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '发帖设备MAC，统一小写冒号格式',
+  `contentText` text COLLATE utf8mb4_unicode_ci COMMENT '文本内容',
+  `contentImage` varchar(512) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '图片地址',
+  `createTime` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updateTime` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_stackchan_post_mac` (`mac`),
+  KEY `idx_stackchan_post_createTime` (`createTime`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='StackChan 社区帖子表';
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `sys_stackchan_post_comment`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `sys_stackchan_post_comment` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '评论ID',
+  `postId` bigint unsigned NOT NULL COMMENT '帖子ID',
+  `mac` varchar(17) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '评论设备MAC，统一小写冒号格式',
+  `content` text COLLATE utf8mb4_unicode_ci COMMENT '评论内容',
+  `createTime` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updateTime` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_stackchan_post_comment_postId` (`postId`),
+  KEY `idx_stackchan_post_comment_mac` (`mac`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='StackChan 社区帖子评论表';
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `sys_stackchan_pano`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `sys_stackchan_pano` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '全景图ID',
+  `mac` varchar(17) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '设备MAC，统一小写冒号格式',
+  `panoUrl` varchar(512) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '全景图地址',
+  `createTime` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updateTime` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_stackchan_pano_mac` (`mac`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='StackChan 设备全景图表';
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `sys_stackchan_friend`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `sys_stackchan_friend` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '好友关系ID',
+  `macA` varchar(17) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '发起方设备MAC，统一小写冒号格式',
+  `macB` varchar(17) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '好友设备MAC，统一小写冒号格式',
+  `createTime` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updateTime` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_stackchan_friend_macA_macB` (`macA`,`macB`),
+  KEY `idx_stackchan_friend_macB` (`macB`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='StackChan 设备好友关系表';
+/*!40101 SET character_set_client = @saved_cs_client */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
 /*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
@@ -883,6 +972,8 @@ INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `cre
 INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (150,1,213,'2026-10-30 00:00:00');
 INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (151,1,214,'2026-10-30 00:00:00');
 INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (152,1,215,'2026-10-30 00:00:00');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (153,1,216,'2026-11-03 00:00:00');
+INSERT INTO `sys_auth_role_permission` (`id`, `authRoleId`, `permissionId`, `createTime`) VALUES (154,1,217,'2026-11-03 00:00:00');
 /*!40000 ALTER TABLE `sys_auth_role_permission` ENABLE KEYS */;
 
 /*!40000 ALTER TABLE `sys_permission` DISABLE KEYS */;
@@ -993,6 +1084,8 @@ INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey
 INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (116,115,'克隆列表接口','system:voice-clone:api:list','api',NULL,NULL,NULL,1,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
 INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (117,115,'克隆创建接口','system:voice-clone:api:create','api',NULL,NULL,NULL,2,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
 INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (118,115,'克隆删除接口','system:voice-clone:api:delete','api',NULL,NULL,NULL,3,'0','1','2026-10-28 00:37:44','2026-10-28 00:37:44');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (216,NULL,'操作日志','system:operation-log','menu','/operation-log','page/OperationLog','file-search',13,'1','1','2026-11-03 00:00:00','2026-11-03 00:00:00');
+INSERT INTO `sys_permission` (`permissionId`, `parentId`, `name`, `permissionKey`, `permissionType`, `path`, `component`, `icon`, `sort`, `visible`, `status`, `createTime`, `updateTime`) VALUES (217,216,'操作日志列表接口','system:operation-log:api:list','api',NULL,NULL,NULL,1,'0','1','2026-11-03 00:00:00','2026-11-03 00:00:00');
 /*!40000 ALTER TABLE `sys_permission` ENABLE KEYS */;
 
 /*!40000 ALTER TABLE `sys_template` DISABLE KEYS */;

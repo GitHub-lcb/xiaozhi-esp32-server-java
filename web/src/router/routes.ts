@@ -13,6 +13,7 @@ export const ROUTES = {
   MEMORY_CHAT: '/memory/chat',
   PUSH: '/push',
   REMINDER: '/reminder',
+  OPERATION_LOG: '/operation-log',
   KNOWLEDGE: '/knowledge',
   VOICEPRINT: '/voiceprint',
   MEMORY_FACT: '/memory-fact',

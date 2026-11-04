@@ -4,6 +4,20 @@ import { useUserStore } from '@/store/user'
 import type { MenuItem, MenuMeta } from '@/types/menu'
 
 /**
+ * 父菜单（分组）图标映射：i18n 标题 key -> Ant Design 图标组件名。
+ * 导出是为了让菜单图标覆盖测试能校验「分组图标也已登记到 menuIcons 白名单」。
+ */
+export const parentMenuIconMap: Record<string, string> = {
+  'router.parent.deviceCenter': 'DesktopOutlined',
+  'router.parent.agent': 'RobotOutlined',
+  'router.parent.message': 'BellOutlined',
+  'router.parent.configManagement': 'SettingOutlined',
+  'router.parent.memoryManagement': 'DatabaseOutlined',
+  'router.parent.settings': 'ToolOutlined',
+  'router.parent.experience': 'AppstoreOutlined',
+}
+
+/**
  * 菜单管理 Composable
  * 处理侧边栏菜单的展开、选中、权限过滤等逻辑
  */
@@ -25,7 +39,7 @@ export function useMenu() {
       }
     }
   )
-  
+
   // 根级子菜单keys（用于手风琴模式）
   const rootSubmenuKeys = [
     'router.parent.deviceCenter',
@@ -36,17 +50,6 @@ export function useMenu() {
     'router.parent.settings',
     'router.parent.experience',
   ]
-
-  // 父菜单图标映射
-  const parentIconMap: Record<string, string> = {
-    'router.parent.deviceCenter': 'DesktopOutlined',
-    'router.parent.agent': 'RobotOutlined',
-    'router.parent.message': 'BellOutlined',
-    'router.parent.configManagement': 'SettingOutlined',
-    'router.parent.memoryManagement': 'DatabaseOutlined',
-    'router.parent.settings': 'ToolOutlined',
-    'router.parent.experience': 'AppstoreOutlined',
-  }
 
   // 获取所有菜单项（从路由配置中获取）
   const menuItems = computed<MenuItem[]>(() => {
@@ -85,7 +88,7 @@ export function useMenu() {
               name: parentKey,
               meta: {
                 title: parentKey, // 这里已经是多语言键了
-                icon: parentIconMap[parentKey] || 'SettingOutlined',
+                icon: parentMenuIconMap[parentKey] || 'SettingOutlined',
                 isAdmin: route.meta.isAdmin
               },
               children: []

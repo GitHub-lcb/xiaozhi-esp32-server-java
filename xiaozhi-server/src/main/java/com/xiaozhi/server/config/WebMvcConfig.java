@@ -58,10 +58,12 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/api/user/sendSmsCaptcha",
                         "/api/user/checkUser",          // 匿名可调，不限速就是账号存在性预言机
                         "/api/config/test",             // 每次试拨都是一次计费外呼
-                        "/api/device",                  // 验证码绑定 POST
+                        "/api/device",
                         "/api/device/scan-bind",
                         "/api/device/ota",
-                        "/api/device/ota/activate"
+                        "/api/device/ota/activate",
+                        "/api/stackChan/v2/user/login",          // StackChan App 登录
+                        "/api/stackChan/v2/user/registration"    // StackChan App 注册
                 )
                 .order(10);
 
@@ -78,7 +80,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
     public FilterRegistrationBean<RateLimitInterceptor.AccountSubjectFilter> accountSubjectFilter() {
         FilterRegistrationBean<RateLimitInterceptor.AccountSubjectFilter> registration =
                 new FilterRegistrationBean<>(new RateLimitInterceptor.AccountSubjectFilter());
-        registration.addUrlPatterns("/api/user", "/api/user/*");
+        registration.addUrlPatterns("/api/user", "/api/user/*", "/api/stackChan/v2/user/*");
         registration.setOrder(Ordered.HIGHEST_PRECEDENCE + 20);
         return registration;
     }

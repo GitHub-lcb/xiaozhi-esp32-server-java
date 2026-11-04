@@ -20,6 +20,15 @@ export default {
   authRole: '/auth-role',
   // 设备的发消息/暂停/继续/停止等动作都是 /device/{id}/xxx 子资源
   device: '/device',
+  // StackChan 整机：App Store 管理 + 通用文件上传（设备/App 端另有 /api/stackChan/**）
+  stackChan: {
+    adminApps: '/stackChan/admin/apps',
+    adminDances: '/stackChan/admin/dances',
+    adminPosts: '/stackChan/admin/posts',
+    adminPanos: '/stackChan/admin/panos',
+    adminFriends: '/stackChan/admin/friends',
+    upload: '/stackChan/uploadFile',
+  },
   agent: '/agent',
   role: {
     root: '/role',
@@ -52,6 +61,8 @@ export default {
   },
   push: '/push',
   reminder: '/reminder',
+  // 审计操作日志查询（表 sys_operation_log，只查不改）
+  operationLog: '/operation-log',
   knowledge: '/knowledge',
   voiceprint: '/voiceprint',
   memoryFact: '/memory-fact',

@@ -109,6 +109,18 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
+        path: 'stackchan',
+        name: 'stackchan',
+        component: () => import('../views/StackChanView.vue'),
+        meta: {
+          title: 'router.title.stackChan',
+          parent: 'router.parent.deviceCenter',
+          icon: 'RobotOutlined',
+          requiresAuth: true,
+          permission: 'system:device',
+        },
+      },
+      {
         path: 'music',
         name: 'music',
         component: () => import('../views/MusicView.vue'),
@@ -216,6 +228,19 @@ const routes: RouteRecordRaw[] = [
           permission: 'system:push',
         },
       },
+      // 操作日志：只读审计查询，归属系统管理分组
+      {
+        path: 'operation-log',
+        name: 'operation-log',
+        component: () => import('../views/OperationLogView.vue'),
+        meta: {
+          title: 'router.title.operationLog',
+          parent: 'router.parent.settings',
+          icon: 'FileSearchOutlined',
+          requiresAuth: true,
+          permission: 'system:operation-log',
+        },
+      },
       {
         path: 'firmware',
         name: 'firmware',
@@ -261,6 +286,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           title: 'router.title.conversationRecords',
           parent: 'router.parent.memoryManagement',
+          icon: 'HistoryOutlined',
           requiresAuth: true,
           permission: 'system:role',
         },
@@ -273,6 +299,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           title: 'router.title.modelConfig',
           parent: 'router.parent.configManagement',
+          icon: 'ExperimentOutlined',
           requiresAuth: true,
           permission: 'system:config',
         },
@@ -284,6 +311,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           title: 'router.title.agent',
           parent: 'router.parent.configManagement',
+          icon: 'RobotOutlined',
           requiresAuth: true,
           permission: 'system:config:agent',
         },
@@ -295,6 +323,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           title: 'router.title.sttConfig',
           parent: 'router.parent.configManagement',
+          icon: 'AudioOutlined',
           requiresAuth: true,
           permission: 'system:config',
         },
@@ -306,6 +335,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           title: 'router.title.ttsConfig',
           parent: 'router.parent.configManagement',
+          icon: 'SoundOutlined',
           requiresAuth: true,
           permission: 'system:config',
         },
@@ -317,6 +347,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           title: 'router.title.ossConfig',
           parent: 'router.parent.configManagement',
+          icon: 'CloudServerOutlined',
           requiresAuth: true,
           permission: 'system:config',
         },
@@ -354,6 +385,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           title: 'router.title.account',
           parent: 'router.parent.settings',
+          icon: 'UserOutlined',
           requiresAuth: true,
           permission: 'system:setting',
         },

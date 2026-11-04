@@ -43,6 +43,9 @@ public class SaTokenConfig implements WebMvcConfigurer {
                         return super.preHandle(request, response, handler);
                     }
                 }.isAnnotation(true))  // 开启注解鉴权功能，支持 @SaIgnore 等注解
-                .addPathPatterns("/api/**");
+                .addPathPatterns("/api/**")
+                // StackChan 伴侣 WebSocket 由 StackChanWsHandshakeInterceptor 自己鉴权
+                // （设备 HMAC / App Sa-Token + 设备归属），避免被管理端登录态拦截。
+                .excludePathPatterns("/api/stackChan/ws");
     }
 }

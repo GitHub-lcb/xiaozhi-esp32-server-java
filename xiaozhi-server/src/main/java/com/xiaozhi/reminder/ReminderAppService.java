@@ -9,11 +9,11 @@ import com.xiaozhi.common.model.req.ReminderPageReq;
 import com.xiaozhi.common.model.resp.ReminderResp;
 import com.xiaozhi.communication.common.RedisBroadcast;
 import com.xiaozhi.reminder.convert.ReminderConvert;
+import com.xiaozhi.reminder.service.ReminderScanExecutor;
 import com.xiaozhi.reminder.service.ReminderService;
 import com.xiaozhi.utils.DateUtils;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,12 +23,12 @@ import java.util.List;
 /**
  * 语音提醒：到点把播报文本投给设备，复用主动推送的 Redis 通道。
  * <p>
- * 调度放在 server 进程：它本来就常驻管理端、只读设备状态，调度器不需要持有会话；
- * 真正开口的仍是持有会话的 dialogue 实例。
+ * 定时调度与多实例互斥在 service 模块的 {@code ReminderScanTask}（server 层不直连 Redis），
+ * 本类实现 {@link ReminderScanExecutor} 承接业务与事务；真正开口的仍是持有会话的 dialogue 实例。
  */
 @Slf4j
 @Service
-public class ReminderAppService {
+public class ReminderAppService implements ReminderScanExecutor {
 
     /** 单次扫描最多处理条数，避免启动后一次性补播大量历史提醒 */
     private static final int BATCH_SIZE = 50;
@@ -71,9 +71,12 @@ public class ReminderAppService {
 
     /**
      * 到点扫描：在线设备直接播报，离线跳过一次（重复任务顺延，一次性任务记为错过）。
+     * <p>
+     * 事务边界在 server（本方法），定时与多实例互斥在 service 的 {@code ReminderScanTask}：
+     * 那边先抢 Redisson 锁，再调用本实现，锁覆盖到事务提交之后才释放。
      */
+    @Override
     @Transactional(rollbackFor = Exception.class)
-    @Scheduled(fixedDelayString = "${xiaozhi.reminder.scan-interval-ms:30000}")
     public void scanDueReminders() {
         LocalDateTime now = DateUtils.now();
         List<ReminderBO> due = reminderService.listDue(now, BATCH_SIZE);

@@ -47,6 +47,7 @@ import org.springframework.util.StringUtils;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -117,6 +118,17 @@ public class DeviceAppService {
      */
     @Value("${xiaozhi.communication.websocket-protocol-version:2}")
     private int websocketProtocolVersion;
+
+    /**
+     * StackChan 整机（M5Stack）家庭自用模式：设备首次 OTA 时自动建档并绑定到
+     * {@link #stackChanOwnerUserId} 的默认角色，避免官方激活码流程在定制固件上无法完成。
+     */
+    @Value("${xiaozhi.stackchan.auto-provision:true}")
+    private boolean stackChanAutoProvision;
+
+    /** 自动绑定的设备归属用户（默认 admin，见 db/init.sql 种子数据） */
+    @Value("${xiaozhi.stackchan.owner-user-id:1}")
+    private Integer stackChanOwnerUserId;
 
 
     public PageResult<DeviceResp> page(DevicePageReq req, Integer userId) {
@@ -352,6 +364,9 @@ public class DeviceAppService {
 
         String deviceId = normalizeDeviceId(req.getDeviceId());
         DeviceBO boundDevice = deviceService.getBO(deviceId);
+        if (boundDevice == null && stackChanAutoProvision && isStackChanBoard(req.getType())) {
+            boundDevice = tryAutoProvisionStackChan(deviceId, req);
+        }
         Map<String, Object> otaResponse = new HashMap<>();
 
         // --- 固件信息 ---
@@ -442,6 +457,43 @@ public class DeviceAppService {
         }
 
         return otaResponse;
+    }
+
+    /**
+     * 只对 StackChan 整机自动绑定；普通小智板卡仍走官方激活码绑定流程。
+     * OTA 请求里的 board.type 来自固件 WifiBoard::GetBoardJson()。
+     */
+    private boolean isStackChanBoard(String boardType) {
+        if (!StringUtils.hasText(boardType)) {
+            return false;
+        }
+        String type = boardType.toLowerCase(Locale.ROOT);
+        return type.contains("stack-chan") || type.contains("stackchan");
+    }
+
+    /**
+     * StackChan 家庭自用模式的自动建档：未绑定设备首次 OTA 直接归属到配置用户，
+     * 并绑定该用户的默认角色。角色未配置时返回 null，让原有激活流程继续兜底。
+     */
+    private DeviceBO tryAutoProvisionStackChan(String deviceId, OtaReq req) {
+        RoleBO role = roleService.getDefaultOrFirstBO(stackChanOwnerUserId);
+        if (role == null) {
+            log.warn("StackChan 自动绑定跳过：用户 {} 没有可用角色，请先在后台创建并设为默认角色, deviceId={}",
+                stackChanOwnerUserId, deviceId);
+            return null;
+        }
+        try {
+            Device device = Device.newDevice(deviceId, "StackChan", req.getType(),
+                stackChanOwnerUserId, role.getRoleId());
+            deviceRepository.save(device);
+            deviceRepository.invalidateVerifyCodes(deviceId);
+            log.info("StackChan 自动绑定成功, deviceId={}, userId={}, roleId={}",
+                deviceId, stackChanOwnerUserId, role.getRoleId());
+            return deviceService.getBO(deviceId);
+        } catch (RuntimeException e) {
+            log.warn("StackChan 自动绑定失败, deviceId={}", deviceId, e);
+            return null;
+        }
     }
 
     /**

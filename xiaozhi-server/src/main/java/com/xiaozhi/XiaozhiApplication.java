@@ -64,6 +64,7 @@ import lombok.extern.slf4j.Slf4j;
     "com.xiaozhi.memorygraph",
     "com.xiaozhi.music",
     "com.xiaozhi.server",
+    "com.xiaozhi.stackchan",
     "com.xiaozhi.stats",
     },
     excludeFilters = {
@@ -97,6 +98,7 @@ import lombok.extern.slf4j.Slf4j;
     "com.xiaozhi.voiceprint.dal.mysql.mapper",
     "com.xiaozhi.voiceclone.dal.mysql.mapper",
     "com.xiaozhi.stats.dal.mysql.mapper",
+    "com.xiaozhi.stackchan.dal.mysql.mapper",
     "com.xiaozhi.verifycode.dal.mysql.mapper",
     "com.xiaozhi.operationlog.dal.mysql.mapper",
 })

@@ -72,6 +72,7 @@ class ComponentScanCoverageArchTest {
             "com.xiaozhi.reminder",
             "com.xiaozhi.security",
             "com.xiaozhi.service",
+            "com.xiaozhi.stackchan",
             "com.xiaozhi.template",
             "com.xiaozhi.stats",
             "com.xiaozhi.voiceclone",

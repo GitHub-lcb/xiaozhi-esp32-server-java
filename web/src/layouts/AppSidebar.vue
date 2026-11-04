@@ -11,6 +11,10 @@ defineProps<{
 
 const { openKeys, selectedKeys, menuItems, handleOpenChange, handleMenuClick } = useMenu()
 
+// public/logo.png 用运行时 BASE_URL 拼：模板里写成绝对路径 "/logo.png" 会被 SFC 编译器改造成
+// import "/logo.png?import"，Vitest 的 jsdom 环境下解析成 file:///logo.png 直接加载失败
+const logoUrl = `${import.meta.env.BASE_URL}logo.png`
+
 // 获取菜单标题（支持多语言）
 function getMenuTitle(title?: string) {
   if (!title) return ''
@@ -24,7 +28,7 @@ function getMenuTitle(title?: string) {
     <!-- Logo -->
     <div class="sidebar-logo">
       <router-link to="/dashboard" class="logo-link">
-        <img src="/logo.png" alt="Logo" class="logo-image" />
+        <img :src="logoUrl" alt="Logo" class="logo-image" />
       </router-link>
     </div>
 

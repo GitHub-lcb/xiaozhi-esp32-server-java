@@ -1,6 +1,10 @@
 package com.xiaozhi.operationlog.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.xiaozhi.common.model.PageResult;
 import com.xiaozhi.common.model.bo.OperationLogBO;
 import com.xiaozhi.operationlog.convert.OperationLogConvert;
 import com.xiaozhi.operationlog.dal.mysql.dataobject.OperationLogDO;
@@ -10,6 +14,7 @@ import com.xiaozhi.utils.DateUtils;
 import jakarta.annotation.Resource;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -34,6 +39,25 @@ public class OperationLogServiceImpl implements OperationLogService {
         } catch (Exception e) {
             log.error("保存操作日志失败: module={} operation={}", operationLog.getModule(), operationLog.getOperation(), e);
         }
+    }
+
+    @Override
+    public PageResult<OperationLogBO> page(int pageNo, int pageSize, String module, String operation,
+                                           Integer userId, Boolean success,
+                                           LocalDateTime startTime, LocalDateTime endTime) {
+        LambdaQueryWrapper<OperationLogDO> query = Wrappers.<OperationLogDO>lambdaQuery()
+            .like(StringUtils.hasText(module), OperationLogDO::getModule, module)
+            .like(StringUtils.hasText(operation), OperationLogDO::getOperation, operation)
+            .eq(userId != null, OperationLogDO::getUserId, userId)
+            .eq(success != null, OperationLogDO::getSuccess, success)
+            .ge(startTime != null, OperationLogDO::getCreateTime, startTime)
+            .le(endTime != null, OperationLogDO::getCreateTime, endTime)
+            .orderByDesc(OperationLogDO::getCreateTime)
+            .orderByDesc(OperationLogDO::getId);
+        IPage<OperationLogDO> result = operationLogMapper.selectPage(new Page<>(pageNo, pageSize), query);
+        List<OperationLogBO> list = result.getRecords().stream().map(operationLogConvert::toBO).toList();
+        return new PageResult<>(list, result.getTotal(),
+            Math.toIntExact(result.getCurrent()), Math.toIntExact(result.getSize()));
     }
 
     @Override

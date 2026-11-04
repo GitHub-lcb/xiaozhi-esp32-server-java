@@ -74,6 +74,11 @@ cd /opt/xiaozhi
   2. `db/upgrade/<日期>__<说明>.sql`（已有库升级）
 - 升级脚本**必须幂等**，可重复执行
 - `deploy.sh` 会按文件名顺序执行 `db/upgrade/` 下所有脚本，不记录执行历史（靠幂等性兜底）
+- **Windows 本地手动执行升级脚本要带字符集参数**：本机 `mysql` 客户端默认常是 `gbk`，脚本里的中文
+  权限名会报 `ERROR 1366 Incorrect string value`（服务器/容器内默认 `utf8mb4`，不受影响）。手动执行用：
+  ```bash
+  mysql --default-character-set=utf8mb4 -uroot -p xiaozhi < db/upgrade/<脚本>.sql
+  ```
 
 ## 五、常用运维命令
 
@@ -93,7 +98,12 @@ docker compose exec redis redis-cli --scan --pattern 'XiaoZhi:Permission*'   # �
 | `XIAOZHI_OPS_TOKEN` | 空 | Prometheus 免登录令牌 |
 | `XIAOZHI_MEMORY_AUTO_EXTRACT` | false | 会话结束自动提炼长期记忆 |
 | `XIAOZHI_MCP_ALLOW_WRITE` | false | MCP 接入点是否允许写操作 |
-| `XIAOZHI_DEVICE_AUTH_SECRET` | 空 | 设备接入鉴权密钥，空=不设防 |
+| `XIAOZHI_DEVICE_AUTH_SECRET` | 空 | 设备接入鉴权密钥，空=不设防；server 与 dialogue 必须同值 |
+| `JWT_SECRET_KEY` | 内置字符串 | 后台登录 token 的签名密钥，生产必须换成随机串；server 与 dialogue 必须同值 |
+| `XIAOZHI_DATA_DIR` | 空 | 录音/上传文件根目录；多进程要读同一份文件时填同一绝对路径（留空=容器工作目录） |
+| `XIAOZHI_SERVER_DOMAIN` | 空 | 对外域名，填了则 OTA/WS 走 https/wss 子域名；留空按探测 IP 走 http/ws |
+| `XIAOZHI_SECURITY_TRUSTED_PROXIES` | 空 | 反代可信 IP/CIDR（逗号分隔）。不配时限流/审计只认 TCP 对端地址 |
+| `EMAIL_SMTP_USERNAME` / `_PASSWORD` | 空 | 注册与找回密码的验证码邮件，不配则发信失败 |
 
 ## 七、曲库
 

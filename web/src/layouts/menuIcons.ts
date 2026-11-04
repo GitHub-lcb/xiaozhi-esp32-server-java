@@ -1,15 +1,23 @@
 import type { Component } from 'vue'
 import {
   ApiOutlined,
+  AppstoreOutlined,
   AudioOutlined,
+  BellOutlined,
   BookOutlined,
   ClockCircleOutlined,
+  CloudServerOutlined,
   CloudUploadOutlined,
   CrownOutlined,
+  CustomerServiceOutlined,
   DashboardOutlined,
   DatabaseOutlined,
   DeploymentUnitOutlined,
+  DesktopOutlined,
+  ExperimentOutlined,
+  FileSearchOutlined,
   GiftOutlined,
+  HistoryOutlined,
   MessageOutlined,
   NotificationOutlined,
   RobotOutlined,
@@ -20,7 +28,9 @@ import {
   SnippetsOutlined,
   SoundOutlined,
   TeamOutlined,
+  ToolOutlined,
   UserAddOutlined,
+  UserOutlined,
 } from '@ant-design/icons-vue'
 
 /**
@@ -30,15 +40,23 @@ import {
  */
 const menuIcons: Record<string, Component> = {
   ApiOutlined,
+  AppstoreOutlined,
   AudioOutlined,
+  BellOutlined,
   BookOutlined,
   ClockCircleOutlined,
+  CloudServerOutlined,
   CloudUploadOutlined,
   CrownOutlined,
+  CustomerServiceOutlined,
   DashboardOutlined,
   DatabaseOutlined,
   DeploymentUnitOutlined,
+  DesktopOutlined,
+  ExperimentOutlined,
+  FileSearchOutlined,
   GiftOutlined,
+  HistoryOutlined,
   MessageOutlined,
   NotificationOutlined,
   RobotOutlined,
@@ -49,7 +67,9 @@ const menuIcons: Record<string, Component> = {
   SnippetsOutlined,
   SoundOutlined,
   TeamOutlined,
+  ToolOutlined,
   UserAddOutlined,
+  UserOutlined,
 }
 
 // sys_permission.icon 存的是 kebab-case（user-add），路由里存的是组件名（UserAddOutlined）

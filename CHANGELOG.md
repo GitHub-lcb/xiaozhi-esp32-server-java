@@ -97,6 +97,51 @@
   server 容器里的 `/app/uploads/music` 还是独立的命名卷：后台上传写进命名卷、设备端读宿主机目录，两边互相看不见。
   现在 server 也挂同一份 `./music`，后台「上传 / 删除 / 同步」与设备点播操作同一批文件。
 
+- feat: **StackChan 整机接入（Java 后端）**。把 Go 版后端的设备侧 / App 兼容接口迁进本仓库：设备首次 OTA
+  自动建档（`board.type` 为 `stack-chan`/`stackchan` 时归属到 `xiaozhi.stackchan.owner-user-id` 的默认角色，
+  `XIAOZHI_STACKCHAN_AUTO_PROVISION=false` 可关）、设备 HMAC 鉴权、伴侣 WebSocket
+  （`/api/stackChan/ws`，Opus/JPEG/控制帧转发 + 5s 心跳）、App Store 应用与跳舞数据、文件上传/公开下载，
+  以及 `/api/stackChan/v2/**` App 兼容接口（登录/注册/用户/设备绑定/跳舞 CRUD）和社区接口
+  （帖子/评论/全景/好友，Go 兼容 `code=0`）。新增六张表
+  `sys_stackchan_dance|app|post|post_comment|pano|friend`；后台新增「设备中心 → StackChan」页；
+  `web/nginx.conf` 放行 `/api/stackChan/ws` 的 WebSocket Upgrade。接入说明见 `docs/STACKCHAN.md`。
+
+### 修复与补强
+
+- fix: **Docker 部署的 `.env` 有一半变量不生效**。`docker-compose.yml` 之前没有把
+  `JWT_SECRET_KEY`、`EMAIL_SMTP_USERNAME/PASSWORD`、`XIAOZHI_DATA_DIR`、`XIAOZHI_SERVER_DOMAIN`、
+  `XIAOZHI_SECURITY_TRUSTED_PROXIES` 以及 MQTT 的 `TOPIC_TEMPLATE/CLIENT_ID/QOS/PRESENCE_TTL`
+  传进容器，写进 `.env` 也不会生效。现在全部透传；`TrustedProxyEnvBindingTest` 钉住可信代理环境变量
+  的名字必须是 `XIAOZHI_SECURITY_TRUSTED_PROXIES`（写成去掉下划线的形式不会被绑定）。
+- fix: **dialogue 的 JWT 密钥是硬编码**，与 server 用环境变量覆盖的方式不一致，两进程无法靠 `.env`
+  对齐。改为 `${JWT_SECRET_KEY:...}`，compose 统一注入，server 与 dialogue 同值。
+- fix: **prod profile 内置默认域名 `ai.lichenbo.cn`**。默认域名属于部署方，写死会把设备指向别人的证书；
+  改为留空按探测到的 IP 走 http/ws，要域名就配 `XIAOZHI_SERVER_DOMAIN`。
+- fix: **多实例 server 会重复播报提醒**。提醒扫描原先直接 `@Scheduled`、没有互斥。现在按分层拆开：
+  service 模块新增 `ReminderScanTask`（`@Scheduled` + Redisson 锁 `lock:task:reminder-scan`，
+  与录音/验证码/审计日志清理任务同范式——server 编排层不允许直连 Redis），server 的
+  `ReminderAppService` 实现 `ReminderScanExecutor` 承接业务与事务；锁覆盖到事务提交之后才释放，
+  抢不到锁的实例跳过本轮。
+- feat: **操作日志可以在后台查了**。新增 `GET /api/operation-log`（分页 + 模块/操作/用户/结果/时间范围
+  筛选，单页上限 100，列表回填用户名）与 `/operation-log` 页面，权限键 `system:operation-log:api:list`；
+  存量库执行 `db/upgrade/2026-11-03__operation_log_query.sql` 补权限（已授权管理员）。
+- fix: **前端单测基线失败**。`AppSidebar.vue` 的 logo 用绝对路径 `src="/logo.png"` 会被 SFC 编译成
+  `import "/logo.png?import"`，Vitest/jsdom 下解析为 `file:///logo.png` 报错，导致 `MainLayout` 测试套件
+  在改动前就是红的；改为 `import.meta.env.BASE_URL` 运行期拼接（行为不变），`npm run test:run`
+  70 个文件 / 558 条用例全绿。
+- fix: **侧边栏菜单图标缺失**。为 7 个菜单路由补 `meta.icon`（对话记录、模型配置、智能体管理、
+  语音识别配置、语音合成配置、存储配置、个人中心）；`menuIcons` 白名单补登记 9 个图标
+  （含设备中心/消息/系统设置/体验 4 个父分组图标、曲库图标），此前这 4 个分组标题也没有图标；
+  父分组图标映射移到 `useMenu.parentMenuIconMap` 导出，新增 `menuIcons.test.ts` 守卫——
+  以后新增菜单若缺图标或图标名没登记白名单，单测直接红。
+- fix: **Windows 本地手动执行升级脚本报 1366**。本机 `mysql` 客户端默认字符集常是 `gbk`，
+  脚本里的中文权限名会被判成非法字符（服务器/容器内默认 `utf8mb4`，不受影响）。
+  `db/upgrade/2026-11-03__operation_log_query.sql` 内置 `SET NAMES utf8mb4`，且改为按
+  `permissionKey` 关联（不写死 permissionId/授权行 id，存量库主键水位不可预知）；
+  `docs/DEPLOY.md` 的手动执行示例补 `--default-character-set=utf8mb4`。
+- test: 新增 `TrustedProxyEnvBindingTest`、`ReminderScanTaskTest`、`OperationLogControllerTest`、
+  `OperationLogServiceImplTest`；架构守卫覆盖新权限键与管理员授权。
+
 ### 升级注意
 
 - 已建好的库执行 `db/upgrade/2026-10-30__music_console.sql` 补曲库表、权限行与管理员授权（幂等，可重复执行），
@@ -106,6 +151,16 @@
 - 已建好的库执行 `db/upgrade/2026-10-28__firmware.sql` 补表与权限（含 `sys_knowledge_*`、`sys_device_screenshot`、`sys_device_command`、`sys_device_channel`、`sys_push_message`、`sys_reminder` 与对应权限）；新装环境直接执行 `db/init.sql`。
 - 要用 MQTT 通道需配 `XIAOZHI_MQTT_*` 一组环境变量（`XIAOZHI_MQTT_ENABLED=true` 才启用），并让固件重新走一次 OTA 拿到 mqtt 配置。
 - 要用 Prometheus 抓指标，需配置 `XIAOZHI_OPS_TOKEN`，并在抓取配置里带同名请求头。
+- 操作日志查询是新权限：存量库执行 `db/upgrade/2026-11-03__operation_log_query.sql`，并清一次
+  Redis `XiaoZhi:Permission*`（或重启 server），否则打开 `/operation-log` 会 403。
+- 本次 `docker-compose.yml` 新透传了 `JWT_SECRET_KEY`/`XIAOZHI_DATA_DIR`/`XIAOZHI_SERVER_DOMAIN`/
+  `XIAOZHI_SECURITY_TRUSTED_PROXIES`/`EMAIL_SMTP_*` 等变量：写入 `.env` 后 `docker compose up -d`
+  才会进容器；server 与 dialogue 的 JWT 密钥必须同值。prod profile 不再内置默认域名，需要域名请显式配置。
+- StackChan 接入：存量库执行 `db/upgrade/2026-11-04__stackchan_dance_app.sql` 与
+  `db/upgrade/2026-11-04__stackchan_community.sql`（均幂等）；`.env` 里 `XIAOZHI_DEVICE_AUTH_SECRET`
+  必须与固件 `CONFIG_STACKCHAN_DEVICE_AUTH_SECRET` 同值（配了才鉴权），`XIAOZHI_STACKCHAN_AUTO_PROVISION`
+  （默认 true）与 `XIAOZHI_STACKCHAN_OWNER_USER_ID`（默认 1）控制首次 OTA 自动建档归属。
+- 反向代理要让 `/api/stackChan/ws` 透传 Upgrade 头，`web/nginx.conf` 已补，旧 web 镜像需更新到本版本。
 
 ---
 

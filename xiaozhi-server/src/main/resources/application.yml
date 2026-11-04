@@ -70,6 +70,11 @@ xiaozhi:
   communication:
     # OTA 下发的 WS 二进制帧版本：1=裸Opus，2=带时间戳(服务端AEC需要)，3=带长度头无时间戳
     websocket-protocol-version: 2
+  # StackChan 整机（M5Stack）适配：家庭自用模式，设备首次 OTA 自动建档并绑定到
+  # owner-user-id 的默认角色；关掉后恢复官方激活码流程。
+  stackchan:
+    auto-provision: ${XIAOZHI_STACKCHAN_AUTO_PROVISION:true}
+    owner-user-id: ${XIAOZHI_STACKCHAN_OWNER_USER_ID:1}
   # 运维端点：令牌只放行 /actuator/health 与 /actuator/prometheus，留空则只认登录态
   ops:
     token: ${XIAOZHI_OPS_TOKEN:}

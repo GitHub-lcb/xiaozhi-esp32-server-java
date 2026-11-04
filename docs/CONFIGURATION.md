@@ -49,6 +49,9 @@
 
 改配置优先用环境变量，不要改仓库里的 yml，升级时不会冲突。
 
+Docker 部署时，下面这些变量都已由 `docker-compose.yml` 透传到 server 与 dialogue 容器，写进 `.env`
+即生效（改完需 `docker compose up -d` 重建容器）。旧版本有部分变量没透传，只改 `.env` 不会生效。
+
 **数据库与中间件**
 
 | 变量 | 默认值 |
@@ -120,6 +123,23 @@ Docker 镜像已内置全部本地模型与原生库。源码部署按需下载�
   不影响整轮对话。没有可用 Key 时工具不会下发给模型，模型不会尝试调用。
 
 接口与计费说明见 [DeepSeek Search & Fetch 文档](https://api-docs.deepseek.com/guides/search)。
+
+## MQTT 设备通道（可选）
+
+设备默认走 WebSocket；打开 MQTT 后 OTA 会给设备下发 `mqtt` 配置块，设备可改走长连接，
+服务端的主动唤醒、主动推送、远程指令也复用这条通道。**固件不支持 MQTT 时务必保持关闭**，
+否则设备切到 MQTT 通道后会失联。
+
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `XIAOZHI_MQTT_ENABLED` | false | 总开关；只有 true 时 OTA 响应才带 `mqtt` 块 |
+| `XIAOZHI_MQTT_BROKER_URL` | `tcp://127.0.0.1:1883` | 服务端连 broker 的地址（compose 内为 `tcp://emqx:1883`） |
+| `XIAOZHI_MQTT_PUBLIC_ENDPOINT` | 空 | 下发给设备的 broker 地址；留空复用 `BROKER_URL`，容器内网地址设备访问不到时要单独配 |
+| `XIAOZHI_MQTT_TOPIC_TEMPLATE` | `devices/p2p/{deviceId}` | 上下行主题模板，必须与固件约定一致 |
+| `XIAOZHI_MQTT_CLIENT_ID` | `xiaozhi-dialogue` | 服务端 MQTT 客户端标识；多实例部署时建议每个实例配置唯一值（重复会互相踢下线） |
+| `XIAOZHI_MQTT_QOS` | 1 | 发布/订阅 QoS |
+| `XIAOZHI_MQTT_PRESENCE_TTL` | 120 | 设备在线判定 TTL（秒），超时由巡检任务置为离线 |
+| `XIAOZHI_MQTT_USERNAME` / `_PASSWORD` | 空 | broker 认证（compose 内默认匿名） |
 
 ## 端口
 

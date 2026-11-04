@@ -51,6 +51,8 @@ xiaozhi:
 
 # ============================================================
 # Sa-Token（共用字段见 application-common.yml）
+# jwt-secret-key 必须与 server 同值：server 签发的 Web 聊天/虚拟设备令牌由 dialogue 校验，
+# 两边不一致时握手/会话校验会随机失败。Docker 部署由 compose 的 JWT_SECRET_KEY 统一注入。
 # ============================================================
 sa-token:
-  jwt-secret-key: xiaozhi-esp32-server-java-jwt-secret-key
+  jwt-secret-key: ${JWT_SECRET_KEY:xiaozhi-esp32-server-java-jwt-secret-key}

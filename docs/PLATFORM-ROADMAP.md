@@ -28,7 +28,7 @@
 | 设备接入一键自检 | `GET /api/device/{deviceId}/self-check`：绑定、在线、信息完整度、OTA 地址、实时通道、设备鉴权、可升级固件七项，逐项给依据与建议；设备页「接入自检」弹窗 | ✅ |
 | 运维指标对接 | `/actuator/health`、`/actuator/prometheus`；`xiaozhi.ota.check`、`xiaozhi.ota.upgrade.delivered`、`xiaozhi.dialogue.servers`；`XIAOZHI_OPS_TOKEN` 令牌只放行两个只读端点 | ✅ |
 
-第一期验收：`mvn compile` 通过；新增 24 条单测（OTA 决策 13、控制器 4、自检 7、指标 3、运维闸门 5）全绿；
+第一期验收：`mvn compile` 通过；新增 32 条单测（OTA 决策 13、控制器 4、自检 7、指标 3、运维闸门 5）全绿；
 架构守卫（模块边界、分层、权限键、组件扫描、时间源等）全绿。
 
 ### 第二期 · 实时通道
@@ -38,7 +38,7 @@
 | MQTT 长连接 / 主动唤醒 | ✅ 底座已落地：`sys_device_channel` 通道表、`MqttBridge`（Paho 客户端 + 订阅设备主题 + 复用 `MessageHandler` 对话管线）、`MqttChatSession`（JSON 主题 / base64 音频）、在线巡检、OTA 下发 `mqtt` 配置块 |
 | 主动消息推送 | ✅ `sys_push_message` + `/api/push*` 接口 + `/push` 后台页面；server 选目标/判在线/计数，dialogue 经 Redis 广播找到会话后用 `Persona.speakNow` 直接合成播报（不过 LLM）；离线设备跳过不排队 |
 | 语音提醒与闹钟 | ✅ `sys_reminder` + `/api/reminder*` + `/reminder` 页面；server 每 30 秒扫描到点提醒，在线设备经 Redis 广播播报，离线跳过一次（重复任务顺延、一次性记「已错过」）；重复规则支持每天/工作日并跳过停机期间已过去的时刻 |
-| 多设备就近应答 | 🟡 `sys_device_group` / `sys_device_group_member` 建表 + `WakeCoordinator`（Redis SET NX EX 原子占位，默认 5 秒窗口，Redis 故障时放行）；待接：`DialogueService.handleWakeWord` 里按分组判定 + 分组管理页面 |
+| 多设备就近应答 | ✅ `sys_device_group` / `sys_device_group_member` 建表 + `WakeCoordinator`（Redis SET NX EX 原子占位，默认 5 秒窗口，Redis 故障时放行）；对话链路已接（`DialogueService.shouldAnswerWake` 按分组判定）+ `/device-group` 分组管理页面；开关 `xiaozhi.dialogue.wake-coordination-enabled` 默认关 |
 | 远程控制设备 | ✅ `sys_device_command` + `POST /api/device/{id}/command` + 设备页「远程控制」弹窗；动作翻译成设备 MCP 工具调用（默认 `self.reboot` / `self.audio_speaker.set_volume`，可配），经 Redis 交给持有会话的 dialogue 执行并回填结果；离线设备在下发前拒绝 |
 | 设备截图 | ✅ `sys_device_screenshot` + `POST /api/device/{id}/screenshot`；调用设备截图工具（默认 `self.screen.snapshot`，可配），回传的 http/data-URI 地址由 dialogue 回填，设备页「截图」弹窗预览；纯 base64 不落库，避免大字段撑爆表 |
 | 双向流式交互 | TTS/STT provider 增加 stream 接口，火山/阿里/讯飞优先 |
@@ -47,10 +47,10 @@
 
 | 功能 | 依赖 |
 |------|------|
-| 知识库 RAG | ✅ 已完成：对话按角色自动检索并注入（`KnowledgeContextProvider` → 系统提示词，失败降级不影响对话）+ `/knowledge` 后台页面（库/文档/检索测试）。后端：`sys_knowledge_base/doc/chunk` 三张表、Tika 解析（PDF/Office/HTML/纯文本）、切片（500 字 + 50 重叠）、向量化入库、余弦检索与 `/api/knowledge*` 接口（含检索测试）；待做：对话挂载（按 roleId 注入提示词）与后台页面 |
-| 长期记忆 / 多成员独立记忆 | ✅ 已完成：人工录入 + 手动提炼 + **会话结束自动提炼**（`xiaozhi.memory.auto-extract-enabled`，默认关） + 按说话人注入。明细：`sys_memory_fact` 表、`/api/memory-fact` 接口、`/memory-fact` 页面、按「说话人 + 全家」注入提示词（声纹识别决定说话人）；待做：对话结束后自动抽取事实（`source=auto`） |
+| 知识库 RAG | ✅ 已完成：对话按角色自动检索并注入（`KnowledgeContextProvider` → 系统提示词，失败降级不影响对话）+ `/knowledge` 后台页面（库/文档/检索测试）。后端：`sys_knowledge_base/doc/chunk` 三张表、Tika 解析（PDF/Office/HTML/纯文本）、切片（500 字 + 50 重叠）、向量化入库、余弦检索与 `/api/knowledge*` 接口（含检索测试） |
+| 长期记忆 / 多成员独立记忆 | ✅ 已完成：人工录入 + 手动提炼 + **会话结束自动提炼**（`xiaozhi.memory.auto-extract-enabled`，默认关） + 按说话人注入。明细：`sys_memory_fact` 表、`/api/memory-fact` 接口、`/memory-fact` 页面、按「说话人 + 全家」注入提示词（声纹识别决定说话人） |
 | 记忆图谱 | ✅ `sys_memory_entity` / `sys_memory_relation`；事实落库时按关系词表自动抽三元组（人工/自动两条路径都接），关系随记忆注入对话，`/memory-graph` 页面可查看与手工维护 |
-| 声纹识别 | 🟡 已就绪：`sys_voiceprint` + sherpa-onnx `SpeakerEmbeddingExtractor` 注册/比对 + `/voiceprint` 页面（注册、识别测试）；待做：对话链路里自动标注说话人 |
+| 声纹识别 | ✅ 已完成：`sys_voiceprint` + sherpa-onnx `SpeakerEmbeddingExtractor` 注册/比对 + `/voiceprint` 页面（注册、识别测试）；对话链路自动标注说话人（`DialogueService.identifySpeaker` → `SpeakerIdentifier` → 消息 metadata） |
 | 音色克隆 | 火山/阿里云克隆 API + `sys_voice_clone` + 文件上传 |
 | 海量工具智能调度 | ✅ `ToolSelector`：工具数超过 `xiaozhi.tools.max-count`（默认 12）时，按本轮问题与工具名/描述的字符重合度粗排取前 N；工具少时原样下发，零扰动 |
 | Function Call 安抚词 | 工具调用期间播放填充语 |

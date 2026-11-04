@@ -16,10 +16,28 @@ x-app-environment: &app-environment
   SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-xiaozhi}
   SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-123456}
   SPRING_DATA_REDIS_HOST: redis
+  # 管理端 JWT 密钥：server 与 dialogue 必须同值（server 签发 Web 聊天/虚拟设备令牌，dialogue 校验）。
+  # 不配时两个进程用同一份内置默认值，生产环境必须显式改成随机串。
+  JWT_SECRET_KEY: ${JWT_SECRET_KEY:-xiaozhi-esp32-server-java-jwt-secret-key}
+  # 注册/找回密码邮件；留空时不发信（接口返回发送失败）
+  EMAIL_SMTP_USERNAME: ${EMAIL_SMTP_USERNAME:-}
+  EMAIL_SMTP_PASSWORD: ${EMAIL_SMTP_PASSWORD:-}
   # 下发给设备的服务器 IP，留空则自动探测
   HOST_IP: ${HOST_IP:-}
+  # 本地存储（录音/上传/曲库）的数据根目录。留空=容器工作目录 /app；
+  # 多机部署到不同宿主机时无法共享本地目录，应改用对象存储。
+  XIAOZHI_DATA_DIR: ${XIAOZHI_DATA_DIR:-}
+  # 对外域名：配了之后 OTA/WS 走 https/wss 子域名；留空按 HOST_IP 走 http/ws。
+  # 域名与前缀证书由部署方自己准备，容器不内置任何默认域名。
+  XIAOZHI_SERVER_DOMAIN: ${XIAOZHI_SERVER_DOMAIN:-}
+  # 反向代理的 IP/CIDR（逗号分隔）。不配时只认 TCP 对端地址，忽略任何 X-Forwarded-For。
+  # 变量名必须是「连字符也写成下划线」的形式，见 TrustedProxyEnvBindingTest。
+  XIAOZHI_SECURITY_TRUSTED_PROXIES: ${XIAOZHI_SECURITY_TRUSTED_PROXIES:-}
   # 设备接入鉴权密钥，留空等于不设防
   XIAOZHI_DEVICE_AUTH_SECRET: ${XIAOZHI_DEVICE_AUTH_SECRET:-}
+  # StackChan 整机家庭自用：首次 OTA 自动建档并归属到 owner-user-id 的默认角色
+  XIAOZHI_STACKCHAN_AUTO_PROVISION: ${XIAOZHI_STACKCHAN_AUTO_PROVISION:-true}
+  XIAOZHI_STACKCHAN_OWNER_USER_ID: ${XIAOZHI_STACKCHAN_OWNER_USER_ID:-1}
   TZ: ${TZ:-Asia/Shanghai}
   # 以下几项之前只写在 .env.example 里，没接进容器，等于开关不存在；现在显式下发
   XIAOZHI_OPS_TOKEN: ${XIAOZHI_OPS_TOKEN:-}
@@ -29,6 +47,11 @@ x-app-environment: &app-environment
   XIAOZHI_MQTT_PUBLIC_ENDPOINT: ${XIAOZHI_MQTT_PUBLIC_ENDPOINT:-}
   XIAOZHI_MQTT_USERNAME: ${XIAOZHI_MQTT_USERNAME:-}
   XIAOZHI_MQTT_PASSWORD: ${XIAOZHI_MQTT_PASSWORD:-}
+  # 主题模板/客户端标识/QoS/在线 TTL：默认值与 yml 保持一致，改了必须与固件约定同步
+  XIAOZHI_MQTT_TOPIC_TEMPLATE: ${XIAOZHI_MQTT_TOPIC_TEMPLATE:-devices/p2p/{deviceId}}
+  XIAOZHI_MQTT_CLIENT_ID: ${XIAOZHI_MQTT_CLIENT_ID:-xiaozhi-dialogue}
+  XIAOZHI_MQTT_QOS: ${XIAOZHI_MQTT_QOS:-1}
+  XIAOZHI_MQTT_PRESENCE_TTL: ${XIAOZHI_MQTT_PRESENCE_TTL:-120}
   # 联网搜索（DeepSeek Search API）：留空 api-key 时自动复用角色 DeepSeek 模型的 Key
   XIAOZHI_SEARCH_API_KEY: ${XIAOZHI_SEARCH_API_KEY:-}
   XIAOZHI_SEARCH_BASE_URL: ${XIAOZHI_SEARCH_BASE_URL:-https://api.deepseek.com}

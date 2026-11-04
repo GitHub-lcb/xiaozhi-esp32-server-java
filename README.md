@@ -67,10 +67,10 @@ Xiaozhi ESP32 Server Java 是基于 [Xiaozhi ESP32](https://github.com/78/xiaozh
 |------|----------|
 | **后端** | Spring Boot、Spring MVC、MyBatis-Plus、MySQL、WebSocket |
 | **前端** | Vue.js、Ant Design、响应式布局 |
-| **数据层** | MySQL 8.0、Redis 7、Qdrant（向量检索） |
+| **数据层** | MySQL 8.0、Redis 7（向量检索基于 MySQL 分片 + 进程内余弦，未接向量库） |
 | **语音识别** | sherpa-onnx SenseVoice（本地）、Vosk（本地）、FunASR、阿里云、阿里云 NLS、腾讯云、讯飞、火山引擎 |
 | **语音合成** | sherpa-onnx（本地）、Edge TTS、阿里云、阿里云 NLS、腾讯云、讯飞、火山引擎、MiniMax |
-| **大语言模型** | OpenAI、智谱 AI、讯飞星火、火山方舟、星辰、Ollama、Dify、Coze |
+| **大语言模型** | OpenAI、DeepSeek、智谱 AI、讯飞星火、火山方舟、星辰、Ollama、Dify、Coze |
 | **扩展能力** | MCP 工具协议与接入点、Function Call、RAG 知识库、长期记忆与记忆图谱、声纹识别、音色克隆 |
 
 ---
@@ -172,6 +172,8 @@ Windows 在 Git Bash 里跑同一条 `./xiaozhi.sh init`；也可用 PowerShell 
 | [CentOS 部署](./docs/CENTOS_DEVELOPMENT.md) | Linux 源码部署，推荐生产环境 |
 | [Windows 部署](./docs/WINDOWS_DEVELOPMENT.md) | Windows 开发与测试 |
 | [固件编译](./docs/FIRMWARE-BUILD.md) | ESP32 固件编译和烧录 |
+| [功能模块梳理](./docs/FUNCTIONAL-MODULES.md) | 按模块梳理实际实现的功能、接口与数据资产 |
+| [缺口修复与细化方案](./docs/GAP-FIX-PLAN.md) | 已修复项记录 + 未完成缺口的文件级改动清单、验收与排期 |
 
 ---
 

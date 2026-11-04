@@ -58,7 +58,9 @@ class WebMvcConfigTest {
             "/api/device",
             "/api/device/scan-bind",
             "/api/device/ota",
-            "/api/device/ota/activate");
+            "/api/device/ota/activate",
+            "/api/stackChan/v2/user/login",
+            "/api/stackChan/v2/user/registration");
     }
 
     /** 账号维度限流依赖过滤器解析请求体，过滤器覆盖不到的端点只能按 IP 计数 */
@@ -67,7 +69,8 @@ class WebMvcConfigTest {
         FilterRegistrationBean<RateLimitInterceptor.AccountSubjectFilter> registration =
             webMvcConfig.accountSubjectFilter();
 
-        assertThat(registration.getUrlPatterns()).containsExactlyInAnyOrder("/api/user", "/api/user/*");
+        assertThat(registration.getUrlPatterns())
+            .containsExactlyInAnyOrder("/api/user", "/api/user/*", "/api/stackChan/v2/user/*");
     }
 
     private List<String> rateLimitPathPatterns() {
