@@ -26,10 +26,13 @@ public class VolcengineModelProvider extends OpenAiModelProvider {
     }
 
     @Override
-    protected void applyThinkingOptions(OpenAiChatOptions.Builder builder, boolean enableThinking, String model) {
+    protected void applyThinkingOptions(OpenAiChatOptions.Builder builder, boolean enableThinking, String model,
+                                        String reasoningEffort) {
         if (enableThinking) {
-            // 不下发 reasoning_effort，火山默认按 high 思考
-            log.info("VolcEngine model {} 已启用思考模式，reasoningEffort=high(默认)", model);
+            // 火山省略参数默认按 high 思考；配置了强度就显式下发
+            String effort = resolveReasoningEffort(reasoningEffort, "high");
+            builder.reasoningEffort(effort);
+            log.info("VolcEngine model {} 已启用思考模式，reasoningEffort={}", model, effort);
         } else {
             // 火山省略参数会默认思考，必须显式 minimal 才能关闭
             builder.reasoningEffort("minimal");

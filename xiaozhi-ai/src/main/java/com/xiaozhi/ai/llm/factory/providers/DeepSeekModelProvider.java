@@ -29,10 +29,24 @@ public class DeepSeekModelProvider extends OpenAiModelProvider {
     }
 
     @Override
-    protected void applyThinkingOptions(OpenAiChatOptions.Builder builder, boolean enableThinking, String model) {
+    protected void applyThinkingOptions(OpenAiChatOptions.Builder builder, boolean enableThinking, String model,
+                                        String reasoningEffort) {
         // 关闭必须显式 none：DeepSeek 默认就在思考，省略参数关不掉
-        String effort = enableThinking ? "low" : "none";
+        String effort = enableThinking ? toDeepSeekEffort(reasoningEffort) : "none";
         builder.reasoningEffort(effort);
         log.info("DeepSeek model {} 思考模式={}, reasoningEffort={}", model, enableThinking, effort);
+    }
+
+    /**
+     * DeepSeek 只认 {@code none/low/high/max}：{@code minimal} 归到 {@code low}、
+     * {@code medium} 归到 {@code high}，未配置时默认 {@code low}。
+     */
+    private static String toDeepSeekEffort(String reasoningEffort) {
+        String effort = resolveReasoningEffort(reasoningEffort, "low");
+        return switch (effort) {
+            case "minimal" -> "low";
+            case "medium" -> "high";
+            default -> effort;
+        };
     }
 }

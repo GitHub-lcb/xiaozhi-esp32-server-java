@@ -42,6 +42,7 @@ public class AiConfig {
 
     // ── 能力 ──────────────────────────────────────────────────────────────────
     private Boolean enableThinking;
+    private String  reasoningEffort;
     private Integer contextLength;
 
     // ── 状态 ──────────────────────────────────────────────────────────────────
@@ -63,7 +64,8 @@ public class AiConfig {
                                      String configName, String configDesc, String modelType,
                                      String appId, String apiKey, String apiSecret,
                                      String ak, String sk, String apiUrl,
-                                     Boolean enableThinking, Integer contextLength, boolean isDefault) {
+                                     Boolean enableThinking, String reasoningEffort,
+                                     Integer contextLength, boolean isDefault) {
         AiConfig c = new AiConfig();
         c.userId     = userId;
         c.configType = configType;
@@ -78,6 +80,7 @@ public class AiConfig {
         c.sk         = sk;
         c.apiUrl     = apiUrl;
         c.enableThinking = enableThinking;
+        c.reasoningEffort = reasoningEffort;
         c.contextLength = contextLength;
         c.state      = STATE_ENABLED;
         c.isDefault  = isDefault;
@@ -90,7 +93,7 @@ public class AiConfig {
                 bo.getConfigName(), bo.getConfigDesc(), bo.getModelType(),
                 bo.getAppId(), bo.getApiKey(), bo.getApiSecret(),
                 bo.getAk(), bo.getSk(), bo.getApiUrl(),
-                bo.getEnableThinking(), bo.getContextLength(), "1".equals(bo.getIsDefault()));
+                bo.getEnableThinking(), bo.getReasoningEffort(), bo.getContextLength(), "1".equals(bo.getIsDefault()));
     }
 
     /** 从持久层重建聚合根（Repository 专用，不产生任何信号）。 */
@@ -99,8 +102,8 @@ public class AiConfig {
                                         String configName, String configDesc, String modelType,
                                         String appId, String apiKey, String apiSecret,
                                         String ak, String sk, String apiUrl,
-                                        Boolean enableThinking, Integer contextLength,
-                                        String state, boolean isDefault,
+                                        Boolean enableThinking, String reasoningEffort,
+                                        Integer contextLength, String state, boolean isDefault,
                                         LocalDateTime createTime, LocalDateTime updateTime) {
         AiConfig c = new AiConfig();
         c.configId   = configId;
@@ -117,6 +120,7 @@ public class AiConfig {
         c.sk         = sk;
         c.apiUrl     = apiUrl;
         c.enableThinking = enableThinking;
+        c.reasoningEffort = reasoningEffort;
         c.contextLength = contextLength;
         c.state      = state;
         c.isDefault  = isDefault;
@@ -130,13 +134,14 @@ public class AiConfig {
     public void update(ConfigBO bo) {
         update(bo.getConfigName(), bo.getConfigDesc(), bo.getModelType(), bo.getProvider(),
                 bo.getAppId(), bo.getApiKey(), bo.getApiSecret(), bo.getAk(), bo.getSk(),
-                bo.getApiUrl(), bo.getEnableThinking(), bo.getContextLength(),
+                bo.getApiUrl(), bo.getEnableThinking(), bo.getReasoningEffort(), bo.getContextLength(),
                 bo.getIsDefault() == null ? null : "1".equals(bo.getIsDefault()));
     }
 
     public void update(String configName, String configDesc, String modelType, String provider,
                        String appId, String apiKey, String apiSecret, String ak, String sk,
-                       String apiUrl, Boolean enableThinking, Integer contextLength, Boolean isDefault) {
+                       String apiUrl, Boolean enableThinking, String reasoningEffort,
+                       Integer contextLength, Boolean isDefault) {
         String oldModelType = this.modelType;
         boolean oldIsDefault = this.isDefault;
         this.configName = merge(configName, this.configName);
@@ -150,6 +155,7 @@ public class AiConfig {
         this.sk         = merge(sk,         this.sk);
         this.apiUrl     = merge(apiUrl,     this.apiUrl);
         this.enableThinking = merge(enableThinking, this.enableThinking);
+        this.reasoningEffort = merge(reasoningEffort, this.reasoningEffort);
         this.contextLength = merge(contextLength, this.contextLength);
         boolean mergedDefault = merge(isDefault, oldIsDefault);
         // 保持默认不变但改了 modelType 时，llm 的默认约束键会跟着变（configType:modelType），
@@ -186,6 +192,7 @@ public class AiConfig {
                 .setState(merge(patch.getState(), this.state))
                 .setIsDefault(merge(patch.getIsDefault(), this.isDefault ? ConfigBO.DEFAULT_YES : ConfigBO.DEFAULT_NO))
                 .setEnableThinking(merge(patch.getEnableThinking(), this.enableThinking))
+                .setReasoningEffort(merge(patch.getReasoningEffort(), this.reasoningEffort))
                 .setContextLength(merge(patch.getContextLength(), this.contextLength))
                 .setCreateTime(this.createTime)
                 .setUpdateTime(this.updateTime);

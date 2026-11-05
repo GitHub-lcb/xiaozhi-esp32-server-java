@@ -27,6 +27,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import java.net.http.HttpClient;
 import java.time.Duration;
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 
 import lombok.extern.slf4j.Slf4j;
@@ -95,7 +96,7 @@ public class OpenAiModelProvider implements ChatModelProvider {
                         : DEFAULT_MAX_COMPLETION_TOKENS)
                 .streamUsage(true);
 
-        applyThinkingOptions(chatOptionsBuilder, enableThinking, model);
+        applyThinkingOptions(chatOptionsBuilder, enableThinking, model, config.getReasoningEffort());
         applyProviderOptions(chatOptionsBuilder, model);
 
         var openAiChatOptions = chatOptionsBuilder.build();
@@ -114,19 +115,35 @@ public class OpenAiModelProvider implements ChatModelProvider {
     /**
      * 应用思考（推理）相关参数。
      * <p>
-     * OpenAI 及标准兼容协议：启用时设置 {@code reasoningEffort=medium}，
+     * OpenAI 及标准兼容协议：启用时下发配置的 {@code reasoningEffort}（未配置按 {@code medium}），
      * 关闭时不下发该参数（由服务端决定默认行为）。
-     * 子类可 override 以适配各厂商差异（如火山需要显式下发以关闭思考）。
+     * 子类可 override 以适配各厂商差异（如 DeepSeek/火山 关闭时需显式下发）。
      *
-     * @param builder        OpenAiChatOptions 构造器
-     * @param enableThinking 是否启用思考
-     * @param model          模型名称（用于日志）
+     * @param builder         OpenAiChatOptions 构造器
+     * @param enableThinking  是否启用思考
+     * @param model           模型名称（用于日志）
+     * @param reasoningEffort 配置的思考强度，可为空
      */
-    protected void applyThinkingOptions(OpenAiChatOptions.Builder builder, boolean enableThinking, String model) {
+    protected void applyThinkingOptions(OpenAiChatOptions.Builder builder, boolean enableThinking, String model,
+                                        String reasoningEffort) {
         if (enableThinking) {
-            builder.reasoningEffort("medium");
-            log.info("OpenAI model {} 已启用思考模式，reasoningEffort=medium", model);
+            String effort = resolveReasoningEffort(reasoningEffort, "medium");
+            builder.reasoningEffort(effort);
+            log.info("OpenAI model {} 已启用思考模式，reasoningEffort={}", model, effort);
         }
+    }
+
+    /**
+     * 解析思考强度：未配置时回落到提供者默认值，统一去空格转小写。
+     *
+     * @param reasoningEffort 配置的思考强度，可为空
+     * @param defaultEffort   未配置时的默认强度
+     * @return 归一化后的思考强度
+     */
+    protected static String resolveReasoningEffort(String reasoningEffort, String defaultEffort) {
+        return StringUtils.hasText(reasoningEffort)
+                ? reasoningEffort.trim().toLowerCase(Locale.ROOT)
+                : defaultEffort;
     }
 
     /**

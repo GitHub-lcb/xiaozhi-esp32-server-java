@@ -97,7 +97,17 @@ const formData = ref<Partial<Config>>({
   ak: undefined,
   sk: undefined,
   enableThinking: false,
+  reasoningEffort: undefined,
 })
+
+// 思考强度选项：留空表示按提供方默认（DeepSeek=low、OpenAI=medium、火山=high）
+const reasoningEffortOptions = computed(() => [
+  { value: 'none', label: t('config.reasoningEffortOptions.none') },
+  { value: 'low', label: t('config.reasoningEffortOptions.low') },
+  { value: 'medium', label: t('config.reasoningEffortOptions.medium') },
+  { value: 'high', label: t('config.reasoningEffortOptions.high') },
+  { value: 'max', label: t('config.reasoningEffortOptions.max') },
+])
 
 // providerConfig 驱动的动态字段一律是文本输入，Config 的索引签名比这更宽（要容纳 isDefault/enableThinking 这类布尔具名字段），
 // 所以读写收敛到这两个函数里做一次收窄，避免把 any 撒到模板上
@@ -247,6 +257,7 @@ function handleEdit(record: Config) {
     modelType: props.configType === 'llm' ? (record.modelType || 'chat') : undefined,
     isDefault: props.configType != 'tts' ? record.isDefault === '1' : false,
     enableThinking: !!record.enableThinking,
+    reasoningEffort: record.reasoningEffort || undefined,
   }
 
   // LLM 更新模型选项
@@ -422,6 +433,7 @@ function resetForm() {
     ak: undefined,
     sk: undefined,
     enableThinking: false,
+  reasoningEffort: undefined,
   }
 }
 
@@ -558,7 +570,7 @@ fetchData()
                   {{ getModelTypeTag(record.modelType).text }}
                 </a-tag>
                 <a-tag v-if="record.enableThinking" color="cyan">
-                  {{ t('config.enableThinking') }}
+                  {{ record.reasoningEffort ? `${t('config.enableThinking')}·${record.reasoningEffort}` : t('config.enableThinking') }}
                 </a-tag>
               </template>
 
@@ -725,6 +737,32 @@ fetchData()
               <a-switch v-model:checked="formData.enableThinking" />
               <span style="margin-left: 8px; color: var(--ant-color-text-tertiary)">
                 {{ t('config.enableThinkingTip') }}
+              </span>
+            </a-form-item>
+
+            <!-- 思考强度（仅 LLM，需先开启思考模式） -->
+            <a-form-item
+              v-if="configType === 'llm'"
+              :label="t('config.reasoningEffort')"
+              name="reasoningEffort"
+            >
+              <a-select
+                v-model:value="formData.reasoningEffort"
+                :disabled="!formData.enableThinking"
+                :placeholder="t('config.reasoningEffortPlaceholder')"
+                allow-clear
+                style="width: 200px"
+              >
+                <a-select-option
+                  v-for="opt in reasoningEffortOptions"
+                  :key="opt.value"
+                  :value="opt.value"
+                >
+                  {{ opt.label }}
+                </a-select-option>
+              </a-select>
+              <span style="margin-left: 8px; color: var(--ant-color-text-tertiary)">
+                {{ t('config.reasoningEffortTip') }}
               </span>
             </a-form-item>
 

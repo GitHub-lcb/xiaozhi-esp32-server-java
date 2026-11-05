@@ -29,6 +29,8 @@ export interface Config {
   projectId?: string
   region?: string
   enableThinking?: boolean
+  // 思考强度：none/low/medium/high/max，留空由提供方默认（DeepSeek=low、OpenAI=medium、火山=high）
+  reasoningEffort?: string
   // 提交时按模型清单静默带上，页面不展示不可编辑
   contextLength?: number
   // 表单字段由 config/providerConfig.ts 的 ConfigField.name 驱动，动态下标取值靠这条索引签名。

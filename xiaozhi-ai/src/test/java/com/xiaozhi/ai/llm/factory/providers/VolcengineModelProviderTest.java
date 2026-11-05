@@ -10,7 +10,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * 钉住火山引擎相对 OpenAI 协议的两处请求参数差异：Chat API 固定 service_tier=fast；
  * 关闭思考必须显式下发 reasoning_effort=minimal（省略该参数时火山默认按 high 思考，
- * 回归后只表现为 token 变多、首字变慢，不会报错）。
+ * 回归后只表现为 token 变多、首字变慢，不会报错）；开启时未配置强度默认 high。
  */
 class VolcengineModelProviderTest {
 
@@ -35,17 +35,26 @@ class VolcengineModelProviderTest {
     void thinkingDisabledSendsMinimalReasoningEffort() throws Exception {
         var builder = OpenAiChatOptions.builder().model(MODEL);
 
-        new VolcengineModelProvider().applyThinkingOptions(builder, false, MODEL);
+        new VolcengineModelProvider().applyThinkingOptions(builder, false, MODEL, null);
 
         assertThat(chatApiRequest(builder).path("reasoning_effort").asText()).isEqualTo("minimal");
     }
 
     @Test
-    void thinkingEnabledOmitsReasoningEffort() throws Exception {
+    void thinkingEnabledWithoutConfigDefaultsToHigh() throws Exception {
         var builder = OpenAiChatOptions.builder().model(MODEL);
 
-        new VolcengineModelProvider().applyThinkingOptions(builder, true, MODEL);
+        new VolcengineModelProvider().applyThinkingOptions(builder, true, MODEL, null);
 
-        assertThat(chatApiRequest(builder).has("reasoning_effort")).isFalse();
+        assertThat(chatApiRequest(builder).path("reasoning_effort").asText()).isEqualTo("high");
+    }
+
+    @Test
+    void thinkingEnabledUsesConfiguredEffort() throws Exception {
+        var builder = OpenAiChatOptions.builder().model(MODEL);
+
+        new VolcengineModelProvider().applyThinkingOptions(builder, true, MODEL, "low");
+
+        assertThat(chatApiRequest(builder).path("reasoning_effort").asText()).isEqualTo("low");
     }
 }
