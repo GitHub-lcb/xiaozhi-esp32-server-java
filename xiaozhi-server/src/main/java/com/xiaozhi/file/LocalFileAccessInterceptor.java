@@ -6,8 +6,10 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.util.UriUtils;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 import lombok.extern.slf4j.Slf4j;
 /**
@@ -44,12 +46,28 @@ public class LocalFileAccessInterceptor implements HandlerInterceptor {
         return false;
     }
 
-    private static String requestPath(HttpServletRequest request) {
+    /**
+     * 取出用于验签的相对路径。
+     * <p>
+     * 必须把 URI 里的百分号编码还原成真实文件名再验签：下发签名时用的是磁盘上的原始文件名
+     * （如 {@code Kevin MacLeod - Carefree.mp3}、{@code 测试.mp3}），而浏览器请求时会把空格编码成
+     * {@code %20}、中文编码成 {@code %E6%B5%8B}，{@link HttpServletRequest#getRequestURI()} 返回的是
+     * 编码后的形态。若不还原就会拿编码后的路径重算签名，必然对不上，试听/下载一律 403。
+     * <p>
+     * 只解码百分号 {@code %}，不把 {@code +} 当空格（与 {@link com.xiaozhi.stackchan.file.StackChanFileController}
+     * 的路径还原保持一致）。非法编码时回退原文，交给验签流程拒绝。
+     */
+    static String requestPath(HttpServletRequest request) {
         String uri = request.getRequestURI();
         String contextPath = request.getContextPath();
         if (contextPath != null && !contextPath.isEmpty() && uri.startsWith(contextPath)) {
             uri = uri.substring(contextPath.length());
         }
-        return uri.startsWith("/") ? uri.substring(1) : uri;
+        String rawPath = uri.startsWith("/") ? uri.substring(1) : uri;
+        try {
+            return UriUtils.decode(rawPath, StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException e) {
+            return rawPath;
+        }
     }
 }
