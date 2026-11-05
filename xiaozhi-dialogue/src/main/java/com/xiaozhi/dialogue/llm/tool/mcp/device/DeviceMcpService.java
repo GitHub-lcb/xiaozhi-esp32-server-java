@@ -106,7 +106,23 @@ public class DeviceMcpService {
         }
         if (chatSession.getDeviceMcpHolder().isMcpInitialized()) {
             List<String> toolNames = sendToolsList(chatSession, withUserTools);
+            // 设备刚启动/正忙时首个 tools/list 可能整体失败（分页第二页尤其容易丢），
+            // 工具表为空会让模型以为设备能力都没开，这里再补一次。
+            if (toolNames.isEmpty()) {
+                log.warn("SessionId: {}, 设备工具列表为空，重试一次 tools/list", chatSession.getSessionId());
+                sleepQuietly(300L);
+                toolNames = sendToolsList(chatSession, withUserTools);
+            }
             persistMcpList(chatSession, toolNames);
+        }
+    }
+
+    /** 重试间隔用；被中断时保留中断标记即可，不影响主流程 */
+    private static void sleepQuietly(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 
@@ -184,22 +200,40 @@ public class DeviceMcpService {
      * @return 本次及后续分页中收集到的所有原始工具名
      */
     private List<String> sendToolsList(ChatSession chatSession, Boolean withUserTools) {
-        DeviceMcpMessage message = new DeviceMcpMessage();
-        message.setSessionId(chatSession.getSessionId());
-        DeviceMcpPayload payload = new DeviceMcpPayload();
-        payload.setId(chatSession.getDeviceMcpHolder().getMcpRequestId());
-        payload.setMethod("tools/list");
-        if (withUserTools != null && withUserTools) {
-            payload.setParams(Map.of("withUserTools", true));
-        } else if (chatSession.getDeviceMcpHolder().getMcpCursor() != null) {
-            payload.setParams(Map.of("cursor", chatSession.getDeviceMcpHolder().getMcpCursor()));
-        } else {
-            payload.setParams(Map.of("cursor", ""));
-        }
-        message.setPayload(payload);
-
         List<String> collectedNames = new ArrayList<>();
-        DeviceMcpMessage result = sendMcpRequest(chatSession, message);
+        DeviceMcpMessage result = null;
+
+        // 设备刚连上/正忙时 tools/list 可能超时或返回错误应答；分页第二页失败会让部分设备能力
+        // （例如 StackChan 的 set_head_angles）永远注册不上。这里对单页请求做有限重试。
+        final int maxAttempts = 3;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            DeviceMcpMessage message = new DeviceMcpMessage();
+            message.setSessionId(chatSession.getSessionId());
+            DeviceMcpPayload payload = new DeviceMcpPayload();
+            payload.setId(chatSession.getDeviceMcpHolder().getMcpRequestId());
+            payload.setMethod("tools/list");
+            if (withUserTools != null && withUserTools) {
+                payload.setParams(Map.of("withUserTools", true));
+            } else if (chatSession.getDeviceMcpHolder().getMcpCursor() != null) {
+                payload.setParams(Map.of("cursor", chatSession.getDeviceMcpHolder().getMcpCursor()));
+            } else {
+                payload.setParams(Map.of("cursor", ""));
+            }
+            message.setPayload(payload);
+
+            result = sendMcpRequest(chatSession, message);
+            if (result != null && result.getPayload() != null && result.getPayload().getResult() != null) {
+                break;
+            }
+            log.warn("SessionId: {}, MCP tools/list 第 {}/{} 次请求失败（cursor={}），{}ms 后重试",
+                    chatSession.getSessionId(), attempt, maxAttempts,
+                    chatSession.getDeviceMcpHolder().getMcpCursor(), 300L * attempt);
+            result = null;
+            if (attempt < maxAttempts) {
+                sleepQuietly(300L * attempt);
+            }
+        }
+
         if (result == null) {
             return collectedNames;
         }

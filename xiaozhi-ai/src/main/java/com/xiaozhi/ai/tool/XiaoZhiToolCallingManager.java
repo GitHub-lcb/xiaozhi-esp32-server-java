@@ -439,10 +439,29 @@ public class XiaoZhiToolCallingManager implements ToolCallingManager, Applicatio
             String toolName = toolCall.name();
             String toolInputArguments = toolCall.arguments();
 
+            // 通过 sessionId 获取 ToolSession（Persona 只传 sessionId 避免序列化问题）。
+            // 提前取出：设备 MCP 工具注册可能晚于本轮请求工具列表快照，兜底查找要用到它。
+            String sessionId = toolContext.getContext().get("sessionId") instanceof String s ? s : null;
+            ToolSession toolSession = null;
+            if (sessionId != null) {
+                ToolSessionProvider provider = sessionProvider();
+                toolSession = provider != null ? provider.getSession(sessionId) : null;
+            }
+
             ToolCallback toolCallback = toolCallbacks.stream()
                     .filter(tool -> toolName.equals(tool.getToolDefinition().name()))
                     .findFirst()
                     .orElseGet(() -> this.toolCallbackResolver.resolve(toolName));
+
+            // 兜底：本轮请求的工具列表可能是设备 MCP 注册完成之前的快照。
+            // 会话工具注册表里已有该工具时直接使用，避免误报「未注册」让模型告诉用户功能不可用。
+            if (toolCallback == null && toolSession != null && toolSession.getToolsSessionHolder() != null) {
+                ToolCallback fromSessionRegistry = toolSession.getToolsSessionHolder().getFunction(toolName);
+                if (fromSessionRegistry != null) {
+                    log.warn("工具 {} 不在本轮请求工具列表中，从会话工具注册表兜底命中", toolName);
+                    toolCallback = fromSessionRegistry;
+                }
+            }
 
             if (toolCallback == null) {
                 // 模型幻觉调用了未注册的工具，返回错误结果让模型自行总结回复，而不是崩掉整个流
@@ -460,16 +479,15 @@ public class XiaoZhiToolCallingManager implements ToolCallingManager, Applicatio
                 returnDirect = returnDirect && toolCallback.getToolMetadata().returnDirect();
             }
 
+            // 兜底查找会重新赋值 toolCallback，lambda 里要用 final 引用
+            final ToolCallback toolCallbackForCall = toolCallback;
+
             ToolCallingObservationContext observationContext = ToolCallingObservationContext.builder()
                     .toolDefinition(toolCallback.getToolDefinition())
                     .toolMetadata(toolCallback.getToolMetadata())
                     .toolCallArguments(toolInputArguments)
                     .build();
-            // 通过 sessionId 获取 ToolSession（Persona 只传 sessionId 避免序列化问题）
-            String sessionId = toolContext.getContext().get("sessionId") instanceof String s ? s : null;
-            ToolSession toolSession = null;
             if (sessionId != null) {
-                toolSession = sessionProvider() != null ? sessionProvider().getSession(sessionId) : null;
                 observationContext.put("sessionId", sessionId);
             }
 
@@ -483,7 +501,7 @@ public class XiaoZhiToolCallingManager implements ToolCallingManager, Applicatio
                     .observe(() -> {
                         String toolResult;
                         try {
-                            toolResult = callWithTimeout(toolCallback, toolInputArguments, toolContext);
+                            toolResult = callWithTimeout(toolCallbackForCall, toolInputArguments, toolContext);
                         }
                         catch (ToolExecutionException ex) {
                             log.error("Tool execution exception: ", ex);
