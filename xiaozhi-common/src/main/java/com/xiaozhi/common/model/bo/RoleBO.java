@@ -2,6 +2,8 @@ package com.xiaozhi.common.model.bo;
 
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 @Data
 public class RoleBO {
 
@@ -26,4 +28,6 @@ public class RoleBO {
     private Integer vadSilenceMs;
     private Integer inactiveTimeoutSeconds = 60;
     private String isDefault;
+    /** 更新时间；RoleConvert 从 DO 透传，App「AI 设置」角色页按毫秒时间戳展示 */
+    private LocalDateTime updateTime;
 }

@@ -2,6 +2,7 @@ package com.xiaozhi.message.service.impl;
 
 import com.xiaozhi.common.config.RuntimePathConfig;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -36,7 +37,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -65,6 +68,51 @@ public class MessageServiceImpl implements MessageService {
         Page<MessageProjection> page = new Page<>(pageNo, pageSize);
         IPage<MessageProjection> iPage = messageMapper.selectPage(page, deviceId, deviceName, sender, messageType, roleId, startTime, endTime, userId, sessionId, source);
         return new PageResult<>(iPage.getRecords(), iPage.getTotal(), pageNo, pageSize);
+    }
+
+    @Override
+    public PageResult<MessageBO> pageBySession(String sessionId, Integer userId, int pageNo, int pageSize) {
+        if (!StringUtils.hasText(sessionId)) {
+            return new PageResult<>(new ArrayList<>(), 0L, pageNo, pageSize);
+        }
+        // 会话消息列表按对话顺序（时间升序）返回，与管理端按时间倒序的排查视角刻意不同
+        LambdaQueryWrapper<MessageDO> query = new LambdaQueryWrapper<MessageDO>()
+            .eq(MessageDO::getSessionId, sessionId)
+            .eq(userId != null, MessageDO::getUserId, userId)
+            .eq(MessageDO::getState, MessageBO.STATE_ENABLED)
+            .orderByAsc(MessageDO::getCreateTime)
+            .orderByAsc(MessageDO::getMessageId);
+        IPage<MessageDO> result = messageMapper.selectPage(new Page<>(pageNo, pageSize), query);
+        return new PageResult<>(result.getRecords().stream().map(messageConvert::toBO).toList(),
+            result.getTotal(), pageNo, pageSize);
+    }
+
+    @Override
+    public Map<String, Long> countBySessionIds(Collection<String> sessionIds) {
+        Map<String, Long> counts = new HashMap<>();
+        if (sessionIds == null || sessionIds.isEmpty()) {
+            return counts;
+        }
+        QueryWrapper<MessageDO> query = new QueryWrapper<MessageDO>()
+            .select("sessionId", "COUNT(*) AS total")
+            .in("sessionId", sessionIds)
+            .eq("state", MessageBO.STATE_ENABLED)
+            .groupBy("sessionId");
+        for (Map<String, Object> row : messageMapper.selectMaps(query)) {
+            String sessionId = null;
+            Long total = null;
+            for (Map.Entry<String, Object> entry : row.entrySet()) {
+                if ("sessionId".equalsIgnoreCase(entry.getKey())) {
+                    sessionId = entry.getValue() == null ? null : entry.getValue().toString();
+                } else if ("total".equalsIgnoreCase(entry.getKey()) && entry.getValue() instanceof Number number) {
+                    total = number.longValue();
+                }
+            }
+            if (sessionId != null && total != null) {
+                counts.put(sessionId, total);
+            }
+        }
+        return counts;
     }
 
     @Override

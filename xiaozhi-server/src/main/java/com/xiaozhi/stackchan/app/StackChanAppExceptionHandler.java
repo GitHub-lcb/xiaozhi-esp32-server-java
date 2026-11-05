@@ -12,16 +12,17 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 /**
  * StackChan App 兼容接口的异常收口。
  * <p>
- * 只作用于 {@link StackChanAppController}：把异常翻译成 Go 版 App 的 {@code {"code":...}} 响应。
+ * 作用于 {@link StackChanAppController} 与 {@link StackChanAiSettingsController}：把异常翻译成
+ * Go 版 App 的 {@code {"code":...}} 响应。
  * 业务错误一律 HTTP 200（App 只解析 body，收到非 2xx 会抛 DioException 且页面无兜底）；
  * 只有登录态失效回 HTTP 401，App 拦截到 401 会清本地登录态。
  * <p>
  * 与全局 {@code GlobalExceptionHandler} 的关系：本类显式声明最高优先级，
- * 且通过 assignableTypes 限定只接管本控制器，管理端其它接口的错误格式不受影响。
+ * 且通过 assignableTypes 限定只接管这两个控制器，管理端其它接口的错误格式不受影响。
  */
 @Slf4j
 @Order(Ordered.HIGHEST_PRECEDENCE)
-@RestControllerAdvice(assignableTypes = StackChanAppController.class)
+@RestControllerAdvice(assignableTypes = {StackChanAppController.class, StackChanAiSettingsController.class})
 public class StackChanAppExceptionHandler {
 
     @ExceptionHandler(StackChanAppException.class)

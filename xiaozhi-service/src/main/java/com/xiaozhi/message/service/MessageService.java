@@ -9,6 +9,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 public interface MessageService {
 
@@ -17,6 +18,20 @@ public interface MessageService {
                                        LocalDateTime startTime, LocalDateTime endTime, Integer userId, String sessionId,
                                        String source);
 
+
+    /**
+     * 按会话分页查询正常消息，按 createTime、messageId 升序返回（会话消息列表用）。
+     * <p>
+     * 返回 BO 而不是 {@code MessageProjection}：投影类只许本业务包引用，App 侧的
+     * {@code com.xiaozhi.stackchan.app} 不在 message 业务包内。
+     */
+    PageResult<MessageBO> pageBySession(String sessionId, Integer userId, int pageNo, int pageSize);
+
+    /**
+     * 按会话批量统计正常消息条数（会话列表用）。
+     * 不存在的会话不会出现在结果里，调用方按 0 处理。
+     */
+    Map<String, Long> countBySessionIds(Collection<String> sessionIds);
 
     void delete(Long messageId);
 
